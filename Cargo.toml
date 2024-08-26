@@ -1,0 +1,7 @@
+[package]
+name = "ruverta"
+version = "0.1.0"
+edition = "2021"
+authors = ["kanade-k-1228"]
+
+[dependencies]
