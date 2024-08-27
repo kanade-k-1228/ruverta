@@ -71,23 +71,17 @@ You can write `always_ff` easily.
 
 ```rust:
 fn test_sm(){
-    let mut m = Module {
-        name: format!("test_mod"),
-        ports: vec![],
-        params: vec![],
-        blocks: vec![],
-    };
-    m.param("BIT", Some("8"));
-    m.input("clk", 1);
-    m.input("rstn", 1);
-    m.input("in0", 8);
-    m.input("in1", 8);
-    m.output("out", 8);
-    m.sync("clk", "rstn", {
-        let mut a = Dff::new();
-        a.stmt("out <= in0 + in1;");
-        a
-    });
+    let mut m = Module::new("test_mod")
+      .param("BIT", Some("8"))
+      .input("clk", 1)
+      .input("rstn", 1)
+      .input("in0", 8)
+      .input("in1", 8)
+      .output("out", 8)
+      .sync("clk", "rstn",
+        Dff::new("clk", "rstn").
+          .stmt("out <= in0 + in1;")
+      );
     println!("{}", m.verilog().join("\n"));
 }
 ```

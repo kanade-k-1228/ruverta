@@ -1,43 +1,44 @@
-use crate::module::{AlwaysFF, Module};
+use crate::{
+    module::{AlwaysFF, Module},
+    stmt::Stmt,
+};
 
 pub struct Seq {
     clk: String,
     rst: String,
-    init: Vec<String>,
-    stmt: Vec<String>,
+    init: Stmt,
+    stmt: Stmt,
 }
 
 impl Seq {
-    pub fn new(clk: &str, rst: &str) -> Self {
+    pub fn new(clk: &str, rst: &str, init: Stmt, stmt: Stmt) -> Self {
         Self {
             clk: clk.to_string(),
             rst: rst.to_string(),
-            init: vec![],
-            stmt: vec![],
+            init,
+            stmt,
         }
-    }
-    pub fn init(&mut self, wire: &str, val: &str) {
-        self.init.push(format!("{wire} = {val};"));
-    }
-    pub fn stmt(&mut self, s: &str) {
-        self.stmt.push(s.to_string());
     }
 }
 
 impl Module {
-    pub fn seq(mut self, seq: &Seq) -> Self {
+    pub fn async_ff(mut self, seq: Seq) -> Self {
         self = self.always_ff({
-            let mut a = AlwaysFF::new()
-                .posedge(&seq.clk)
-                .stmt(&format!("if (!{}) begin", seq.rst));
-            for s in &seq.init {
-                a = a.stmt(&format!("  {s}"));
-            }
-            a = a.stmt("end else begin");
-            for s in &seq.stmt {
-                a = a.stmt(&format!("  {s}"));
-            }
-            a.stmt("end")
+            AlwaysFF::new().posedge(&seq.clk).negedge(&seq.rst).stmt(
+                Stmt::cond()
+                    .r#if(&format!("!{}", seq.rst), seq.init)
+                    .r#else(seq.stmt),
+            )
+        });
+        self
+    }
+    pub fn sync_ff(mut self, seq: Seq) -> Self {
+        self = self.always_ff({
+            AlwaysFF::new().posedge(&seq.clk).stmt(
+                Stmt::cond()
+                    .r#if(&format!("!{}", seq.rst), seq.init)
+                    .r#else(seq.stmt),
+            )
         });
         self
     }

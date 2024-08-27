@@ -1,3 +1,5 @@
+use crate::stmt::Stmt;
+
 // ----------------------------------------------------------------------------
 
 #[derive(Debug)]
@@ -111,7 +113,7 @@ fn test_module() {
         .input("in0", 8)
         .input("in1", 8)
         .output("out", 8)
-        .always_comb(AlwaysComb::new().stmt("out = in0 + in1;"));
+        .always_comb(AlwaysComb::new(Stmt::assign("out", "in0 + in1")));
     println!("{}", m.verilog().join("\n"));
 }
 
@@ -336,14 +338,14 @@ fn test_instant() {
 #[derive(Debug)]
 pub struct AlwaysFF {
     edges: Vec<Edge>,
-    stmt: Vec<String>,
+    stmt: Stmt,
 }
 
 impl AlwaysFF {
     pub fn new() -> Self {
         Self {
             edges: vec![],
-            stmt: vec![],
+            stmt: Stmt::new(),
         }
     }
     pub fn posedge(mut self, wire: &str) -> Self {
@@ -358,8 +360,8 @@ impl AlwaysFF {
         self.edges.push(Edge::Bothedge(wire.to_string()));
         self
     }
-    pub fn stmt(mut self, stmt: &str) -> Self {
-        self.stmt.push(stmt.to_string());
+    pub fn stmt(mut self, stmt: Stmt) -> Self {
+        self.stmt = stmt;
         self
     }
 }
@@ -375,9 +377,7 @@ impl AlwaysFF {
 
         let mut code = Vec::<String>::new();
         code.push(format!("always_ff @({edge_str}) begin"));
-        for s in &self.stmt {
-            code.push(format!("  {s}"));
-        }
+        code.push(format!("{}", self.stmt.print(0)));
         code.push(format!("end"));
         code
     }
@@ -402,13 +402,11 @@ impl Edge {
 
 #[test]
 fn test_always_ff() {
-    let a = AlwaysFF::new()
-        .posedge("clk")
-        .stmt("if (!rstn) begin")
-        .stmt("  cnt <= 0;")
-        .stmt("end else begin")
-        .stmt("  cnt <= cnt + 1;")
-        .stmt("end");
+    let a = AlwaysFF::new().posedge("clk").stmt(
+        Stmt::cond()
+            .r#if("!rstn", Stmt::assign("cnt", "0"))
+            .r#else(Stmt::assign("cnt", "cnt + 1")),
+    );
     println!("{}", a.verilog().join("\n"));
 }
 
@@ -416,16 +414,12 @@ fn test_always_ff() {
 
 #[derive(Debug)]
 pub struct AlwaysComb {
-    stmt: Vec<String>,
+    stmt: Stmt,
 }
 
 impl AlwaysComb {
-    pub fn new() -> Self {
-        Self { stmt: vec![] }
-    }
-    pub fn stmt(mut self, stmt: &str) -> Self {
-        self.stmt.push(stmt.to_string());
-        self
+    pub fn new(stmt: Stmt) -> Self {
+        Self { stmt }
     }
 }
 
@@ -433,9 +427,7 @@ impl AlwaysComb {
     fn verilog(&self) -> Vec<String> {
         let mut code = Vec::<String>::new();
         code.push(format!("always_comb begin"));
-        for s in &self.stmt {
-            code.push(format!("  {s}"));
-        }
+        code.push(format!("{}", self.stmt.print(0)));
         code.push(format!("end"));
         code
     }
@@ -443,125 +435,10 @@ impl AlwaysComb {
 
 #[test]
 fn test_always_comb() {
-    let a = AlwaysComb::new()
-        .stmt("if (!rstn) begin")
-        .stmt("  n_cnt = 0;")
-        .stmt("end else begin")
-        .stmt("  n_cnt = cnt + 1;")
-        .stmt("end");
+    let a = AlwaysComb::new(
+        Stmt::cond()
+            .r#if("!rstn", Stmt::begin().add(Stmt::assign("n_cnt", "0")).end())
+            .r#else(Stmt::assign("n_cnt", "cnt + 1")),
+    );
     println!("{}", a.verilog().join("\n"));
 }
-
-// ----------------------------------------------------------------------------
-
-// #[derive(Debug)]
-// enum Stmt {
-//     Block {
-//         body: Vec<Stmt>,
-//     },
-//     Assign {
-//         var: String,
-//         val: String,
-//     },
-//     IfEl {
-//         ifs: Vec<(String, Stmt)>,
-//         el: Option<Box<Stmt>>,
-//     },
-// }
-
-// impl Stmt {
-//     fn block() -> Self {
-//         Stmt::Block { body: vec![] }
-//     }
-
-//     fn assign(mut self, var: &str, val: &str) -> Self {
-//         if let Stmt::Block {
-//             body: ref mut stmts,
-//         } = self
-//         {
-//             stmts.push(Stmt::Assign {
-//                 var: var.to_string(),
-//                 val: val.to_string(),
-//             });
-//         }
-//         self
-//     }
-
-//     fn if_stmt(mut self, cond: &str, body: Stmt) -> Self {
-//         if let Stmt::Block {
-//             body: ref mut stmts,
-//         } = self
-//         {
-//             stmts.push(Stmt::IfEl {
-//                 cond: cond.to_string(),
-//                 body: Box::new(body),
-//             });
-//         }
-//         self
-//     }
-
-//     fn elif(mut self, cond: &str, body: Stmt) -> Self {
-//         if let Stmt::Block {
-//             body: ref mut stmts,
-//         } = self
-//         {
-//             stmts.push(Stmt::Elif {
-//                 cond: cond.to_string(),
-//                 body: Box::new(body),
-//             });
-//         }
-//         self
-//     }
-
-//     fn else_stmt(mut self, body: Stmt) -> Self {
-//         if let Stmt::Block {
-//             body: ref mut stmts,
-//         } = self
-//         {
-//             stmts.push(Stmt::Else {
-//                 body: Box::new(body),
-//             });
-//         }
-//         self
-//     }
-// }
-
-// impl Stmt {
-//     fn print(&self, indent: usize) -> String {
-//         let tab = |n: usize| "  ".repeat(n);
-//         match self {
-//             Stmt::Block { body } => {
-//                 format!(
-//                     "begin\n{}\n{}end",
-//                     body.iter()
-//                         .map(|stmt| stmt.print(indent + 1))
-//                         .collect::<Vec<_>>()
-//                         .join("\n"),
-//                     tab(indent)
-//                 )
-//             }
-//             Stmt::Assign { var, val } => {
-//                 format!("{}{} = {};", tab(indent), var, val)
-//             }
-//             Stmt::If { cond, body } => {
-//                 format!("{}if ({}) {}", tab(indent), cond, body.print(indent))
-//             }
-//             Stmt::Elif { cond, body } => {
-//                 format!("{}else if ({}) {}", tab(indent), cond, body.print(indent),)
-//             }
-//             Stmt::Else { body } => {
-//                 format!("{}else {}", tab(indent), body.print(indent))
-//             }
-//         }
-//     }
-// }
-
-// #[test]
-// fn test_stmt() {
-//     let stmt = Stmt::block()
-//         .if_stmt("a == b", Stmt::block().assign("a", "1").assign("b", "1"))
-//         .elif("c == d", Stmt::block().assign("c", "c - 1"))
-//         .else_stmt(Stmt::block().assign("e", "2"));
-//     println!("{:?}", stmt);
-//     println!("{}", stmt.print(0));
-// }
