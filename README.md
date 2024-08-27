@@ -8,36 +8,46 @@ Only support tiny subset of sv.
 - Only `always_ff` : no `always`
 - Only `always_comb` : no `assign`
 
+## Install
+
+```
+$ cargo add --git "https://github.com/kanade-k-1228/ruverta.git"
+```
+
+or
+
+```
+[dependencies]
+ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
+```
+
 ## Basic module builder
 
-<div style="display: flex; width: 100%;">
-<div style="width: 50%; padding-right: 10px;">
+<style>
+.c{display:flex}
+.i{flex:1;padding:10px}
+</style>
+
+<div class="c">
+<div class="i">
 
 ```rust:
+use ruverta::{Module, AlwaysComb, Stmt};
 fn test_module() {
-    let mut m = Module {
-        name: format!("test_mod"),
-        ports: vec![],
-        params: vec![],
-        blocks: vec![],
-    };
-    m.param("BIT", Some("8"));
-    m.input("clk", 1);
-    m.input("rstn", 1);
-    m.input("in0", 8);
-    m.input("in1", 8);
-    m.output("out", 8);
-    m.always_comb({
-        let mut a = AlwaysComb::new();
-        a.stmt("out = in0 + in1;");
-        a
-    });
+    let m = Module::new("test_module")
+        .param("BIT", Some("8"))
+        .input("clk", 1)
+        .input("rstn", 1)
+        .input("in0", 8)
+        .input("in1", 8)
+        .output("out", 8)
+        .always_comb(AlwaysComb::new(Stmt::assign("out", "in0 + in1")));
     println!("{}", m.verilog().join("\n"));
 }
 ```
 
 </div>
-<div style="width: 50%; padding-left: 10px;">
+<div class="i">
 
 ```verilog:
 module test_mod #(
@@ -64,10 +74,10 @@ You can build some circuit easily.
 
 ### Common Clock & Reset
 
-You can write `always_ff` easily.
+You can write `always_ff` slight easily.
 
-<div style="display: flex; width: 100%;">
-<div style="width: 50%; padding-right: 10px;">
+<div class="c">
+<div class="i">
 
 ```rust:
 fn test_sm(){
@@ -87,7 +97,7 @@ fn test_sm(){
 ```
 
 </div>
-<div style="width: 50%; padding-left: 10px;">
+<div class="i">
 
 ```verilog:
 ```
@@ -97,8 +107,8 @@ fn test_sm(){
 
 ### CSR Bus
 
-<div style="display: flex; width: 100%;">
-<div style="width: 50%; padding-right: 10px;">
+<div class="c">
+<div class="i">
 
 ```rust:
 fn test_csr() {
@@ -114,7 +124,7 @@ fn test_csr() {
 ```
 
 </div>
-<div style="width: 50%; padding-left: 10px;">
+<div class="i">
 
 ```verilog:
 module test_csr #(
@@ -152,8 +162,8 @@ endmodule;
 
 ### Combinational Circuit
 
-<div style="display: flex; width: 100%;">
-<div style="width: 50%; padding-right: 10px;">
+<div class="c">
+<div class="i">
 
 ```rust:
 let mut module = Module::new("sample_mod");
@@ -173,7 +183,7 @@ Comb::build(module, comb);
 ```
 
 </div>
-<div style="width: 50%; padding-left: 10px;">
+<div class="i">
 
 ```verilog:
 ```
@@ -183,16 +193,31 @@ Comb::build(module, comb);
 
 ### State Machine
 
-### And More Builders!
-
-<div style="display: flex; width: 100%;">
-<div style="width: 50%; padding-right: 10px;">
+<div class="c">
+<div class="i">
 
 ```rust:
 ```
 
 </div>
-<div style="width: 50%; padding-left: 10px;">
+<div class="i">
+
+```verilog:
+```
+
+</div>
+</div>
+
+### And More Builders!
+
+<div class="c">
+<div class="i">
+
+```rust:
+```
+
+</div>
+<div class="i">
 
 ```verilog:
 ```

@@ -3,14 +3,14 @@ use crate::{
     stmt::Stmt,
 };
 
-pub struct Seq {
+pub struct Dff {
     clk: String,
     rst: String,
     init: Stmt,
     stmt: Stmt,
 }
 
-impl Seq {
+impl Dff {
     pub fn new(clk: &str, rst: &str, init: Stmt, stmt: Stmt) -> Self {
         Self {
             clk: clk.to_string(),
@@ -22,7 +22,7 @@ impl Seq {
 }
 
 impl Module {
-    pub fn async_ff(mut self, seq: Seq) -> Self {
+    pub fn async_ff(mut self, seq: Dff) -> Self {
         self = self.always_ff({
             AlwaysFF::new().posedge(&seq.clk).negedge(&seq.rst).stmt(
                 Stmt::cond()
@@ -32,7 +32,7 @@ impl Module {
         });
         self
     }
-    pub fn sync_ff(mut self, seq: Seq) -> Self {
+    pub fn sync_ff(mut self, seq: Dff) -> Self {
         self = self.always_ff({
             AlwaysFF::new().posedge(&seq.clk).stmt(
                 Stmt::cond()
@@ -42,4 +42,22 @@ impl Module {
         });
         self
     }
+}
+
+#[test]
+fn test_dff() {
+    let m = Module::new("test_mod")
+        .param("BIT", Some("8"))
+        .input("clk", 1)
+        .input("rstn", 1)
+        .input("in0", 8)
+        .input("in1", 8)
+        .output("out", 8)
+        .sync_ff(Dff::new(
+            "clk",
+            "rstn",
+            Stmt::open().add(Stmt::assign("out", "0")).close(),
+            Stmt::open().add(Stmt::assign("out", "in0 + in1")).close(),
+        ));
+    println!("{}", m.verilog().join("\n"));
 }

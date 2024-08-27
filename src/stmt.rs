@@ -14,7 +14,7 @@ impl Stmt {
     pub fn assign(var: &str, val: &str) -> Self {
         Self::Assign(Assign::new(var, val))
     }
-    pub fn begin() -> Block {
+    pub fn open() -> Block {
         Block::begin()
     }
     pub fn cond() -> Cond {
@@ -23,37 +23,47 @@ impl Stmt {
 }
 
 impl Stmt {
-    pub fn print(&self, indent: usize) -> String {
-        let tab = "  ".repeat(indent);
+    pub fn verilog(&self) -> Vec<String> {
         match self {
             Stmt::Block(Block { body }) => {
-                let blk_str = body
-                    .iter()
-                    .map(|stmt| stmt.print(indent + 1))
-                    .collect::<Vec<_>>()
-                    .join("");
-                format!("{tab}begin\n{blk_str}{tab}end\n")
+                let mut blk_str = vec!["begin".to_string()];
+                blk_str.extend(
+                    body.iter()
+                        .flat_map(|stmt| {
+                            stmt.verilog()
+                                .iter()
+                                .map(|s| format!("  {s}"))
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>(),
+                );
+                blk_str.push("end".to_string());
+                blk_str
             }
             Stmt::Assign(Assign { var, val }) => {
-                format!("{tab}{} = {};\n", var, val)
+                vec![format!("{var} = {val};")]
             }
             Stmt::Cond(Cond { if_, else_ }) => {
-                let mut result = String::new();
-                for (i, (cond, body)) in if_.iter().enumerate() {
-                    if i == 0 {
-                        result.push_str(&format!("{tab}if ({})\n{}", cond, body.print(indent + 1)));
-                    } else {
-                        result.push_str(&format!(
-                            "{tab}else if ({})\n{}",
-                            cond,
-                            body.print(indent + 1)
-                        ));
-                    }
-                }
+                let mut a = if_
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(i, (cond, body))| {
+                        if i == 0 {
+                            let mut a = vec![format!("if ({})", cond)];
+                            a.extend(body.verilog().iter().map(|s| format!("  {s}")));
+                            a
+                        } else {
+                            let mut a = vec![format!("else if ({})", cond)];
+                            a.extend(body.verilog().iter().map(|s| format!("  {s}")));
+                            a
+                        }
+                    })
+                    .collect::<Vec<_>>();
                 if let Some(else_) = else_ {
-                    result.push_str(&format!("{tab}else\n{}", else_.print(indent + 1)));
+                    a.extend(vec![format!("else")]);
+                    a.extend(else_.verilog().iter().map(|s| format!("  {s}")));
                 }
-                result
+                a
             }
         }
     }
@@ -74,7 +84,7 @@ impl Block {
         self.body.push(stmt);
         self
     }
-    pub fn end(self) -> Stmt {
+    pub fn close(self) -> Stmt {
         Stmt::Block(self)
     }
 }

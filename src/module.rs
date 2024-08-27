@@ -377,7 +377,7 @@ impl AlwaysFF {
 
         let mut code = Vec::<String>::new();
         code.push(format!("always_ff @({edge_str}) begin"));
-        code.push(format!("{}", self.stmt.print(0)));
+        code.extend(self.stmt.verilog());
         code.push(format!("end"));
         code
     }
@@ -427,7 +427,7 @@ impl AlwaysComb {
     fn verilog(&self) -> Vec<String> {
         let mut code = Vec::<String>::new();
         code.push(format!("always_comb begin"));
-        code.push(format!("{}", self.stmt.print(0)));
+        code.extend(self.stmt.verilog());
         code.push(format!("end"));
         code
     }
@@ -437,7 +437,10 @@ impl AlwaysComb {
 fn test_always_comb() {
     let a = AlwaysComb::new(
         Stmt::cond()
-            .r#if("!rstn", Stmt::begin().add(Stmt::assign("n_cnt", "0")).end())
+            .r#if(
+                "!rstn",
+                Stmt::open().add(Stmt::assign("n_cnt", "0")).close(),
+            )
             .r#else(Stmt::assign("n_cnt", "cnt + 1")),
     );
     println!("{}", a.verilog().join("\n"));

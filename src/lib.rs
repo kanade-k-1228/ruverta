@@ -1,6 +1,6 @@
 pub mod csr;
+pub mod dff;
 pub mod module;
-pub mod seq;
 pub mod stmt;
 
 #[test]
@@ -20,41 +20,43 @@ fn test_uart() {
     let uart = module::Module::new("uart")
         .inout("clk", 1)
         .input("rstn", 1)
+        .output("tx", 1)
+        .input("rx", 1)
         .regmap(
-            &csr::RegMap::new("csr", 32)
-                .read_write("tx_buf", 8, 1)
-                .read_write("rx_buf", 8, 1)
-                .trigger("tx_start"),
+            &&csr::RegMap::new("csr", 32)
+                .read_write("div", 32, 1)
+                .read_write("tx_data", 8, 1)
+                .read_only("rx_data", 8, 1),
         )
-        .async_ff(seq::Seq::new(
+        .async_ff(dff::Dff::new(
             "clk",
             "rstn",
-            stmt::Stmt::begin()
+            stmt::Stmt::open()
                 .add(stmt::Stmt::assign("buf", "0"))
                 .add(stmt::Stmt::assign("cnt", "0"))
-                .end(),
-            stmt::Stmt::begin()
+                .close(),
+            stmt::Stmt::open()
                 .add(stmt::Stmt::assign("buf", "a"))
-                .end(),
+                .close(),
         ));
     println!("{}", uart.verilog().join("\n"));
 }
 
 #[test]
 fn test_stmt() {
-    let stmt = stmt::Stmt::begin()
+    let stmt = stmt::Stmt::open()
         .add(
             stmt::Stmt::cond()
                 .r#if(
                     "a == b",
-                    stmt::Stmt::begin()
+                    stmt::Stmt::open()
                         .add(stmt::Stmt::assign("a", "1"))
                         .add(stmt::Stmt::assign("b", "1"))
-                        .end(),
+                        .close(),
                 )
                 .r#if("c == d", stmt::Stmt::assign("c", "c - 1"))
                 .r#else(stmt::Stmt::assign("e", "2")),
         )
-        .end();
-    println!("{}", stmt.print(0));
+        .close();
+    println!("{}", stmt.verilog().join("\n"));
 }
