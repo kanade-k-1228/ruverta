@@ -4,13 +4,13 @@ use crate::{
 };
 
 #[derive(Debug)]
-struct AXILite {
+pub struct RegMap {
     name: String,
     data_width: u32,
     list: Vec<Entry>,
 }
 
-impl AXILite {
+impl RegMap {
     pub fn new(name: &str, width: u32) -> Self {
         assert!(width == 32 || width == 64);
         Self {
@@ -28,7 +28,7 @@ impl AXILite {
     }
 }
 
-impl Builder for AXILite {
+impl Builder for RegMap {
     fn build(module: &mut Module, config: &Self) {
         // Allocate Registors
         for entry in &config.list {
@@ -71,9 +71,9 @@ enum Reg {
 #[test]
 fn test_axi_lite() {
     let mut module = Module::new("sample_mod");
-    let mut axil = AXILite::new("cbus", 32);
+    let mut axil = RegMap::new("cbus", 32);
     axil.reg(Reg::ReadWrite, "ctrl", 2);
     axil.vec(Reg::ReadOnly, "buf", 8);
-    AXILite::build(&mut module, &axil);
-    println!("{}", module.verilog())
+    RegMap::build(&mut module, &axil);
+    println!("{}", module.verilog().join("\n"))
 }
