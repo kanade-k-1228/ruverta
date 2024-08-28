@@ -23,14 +23,21 @@ impl Stmt {
 }
 
 impl Stmt {
-    pub fn verilog(&self) -> Vec<String> {
+    pub fn blocking(&self) -> Vec<String> {
+        self.verilog("<=")
+    }
+    pub fn nonblocking(&self) -> Vec<String> {
+        self.verilog("=")
+    }
+
+    fn verilog(&self, assign_op: &str) -> Vec<String> {
         match self {
             Stmt::Block(Block { body }) => {
                 let mut blk_str = vec!["begin".to_string()];
                 blk_str.extend(
                     body.iter()
                         .flat_map(|stmt| {
-                            stmt.verilog()
+                            stmt.verilog(assign_op)
                                 .iter()
                                 .map(|s| format!("  {s}"))
                                 .collect::<Vec<_>>()
@@ -41,7 +48,7 @@ impl Stmt {
                 blk_str
             }
             Stmt::Assign(Assign { var, val }) => {
-                vec![format!("{var} = {val};")]
+                vec![format!("{var} {assign_op} {val};")]
             }
             Stmt::Cond(Cond { if_, else_ }) => {
                 let mut a = if_
@@ -50,18 +57,18 @@ impl Stmt {
                     .flat_map(|(i, (cond, body))| {
                         if i == 0 {
                             let mut a = vec![format!("if ({})", cond)];
-                            a.extend(body.verilog().iter().map(|s| format!("  {s}")));
+                            a.extend(body.verilog(assign_op).iter().map(|s| format!("  {s}")));
                             a
                         } else {
                             let mut a = vec![format!("else if ({})", cond)];
-                            a.extend(body.verilog().iter().map(|s| format!("  {s}")));
+                            a.extend(body.verilog(assign_op).iter().map(|s| format!("  {s}")));
                             a
                         }
                     })
                     .collect::<Vec<_>>();
                 if let Some(else_) = else_ {
                     a.extend(vec![format!("else")]);
-                    a.extend(else_.verilog().iter().map(|s| format!("  {s}")));
+                    a.extend(else_.verilog(assign_op).iter().map(|s| format!("  {s}")));
                 }
                 a
             }

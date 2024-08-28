@@ -23,15 +23,9 @@ ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
 
 ## Basic module builder
 
-<style>
-.c{display:flex}
-.i{flex:1;padding:10px}
-</style>
+<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
-<div class="c">
-<div class="i">
-
-```rust:
+```rust
 use ruverta::{Module, AlwaysComb, Stmt};
 fn test_module() {
     let m = Module::new("test_module")
@@ -46,10 +40,9 @@ fn test_module() {
 }
 ```
 
-</div>
-<div class="i">
+</td><td>
 
-```verilog:
+```systemverilog
 module test_mod #(
   parameter BIT = 8
 ) (
@@ -65,21 +58,22 @@ module test_mod #(
 endmodule;
 ```
 
-</div>
-</div>
+</td></tr></table>
 
 ## Advanced builder
 
 You can build some circuit easily.
 
+- DFF: Setup clock / reset
+- 
+
 ### Common Clock & Reset
 
 You can write `always_ff` slight easily.
 
-<div class="c">
-<div class="i">
+<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
-```rust:
+```rust
 fn test_sm(){
     let mut m = Module::new("test_mod")
       .param("BIT", Some("8"))
@@ -96,21 +90,18 @@ fn test_sm(){
 }
 ```
 
-</div>
-<div class="i">
+</td><td>
 
-```verilog:
+```verilog
 ```
 
-</div>
-</div>
+</td></tr></table>
 
 ### CSR Bus
 
-<div class="c">
-<div class="i">
+<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
-```rust:
+```rust
 fn test_csr() {
     let regmap = csr::RegMap::new("cbus", 32)
         .read_only("ctrl", 8, 2)
@@ -123,10 +114,9 @@ fn test_csr() {
 }
 ```
 
-</div>
-<div class="i">
+</td><td>
 
-```verilog:
+```verilog
 module test_csr #(
 ) (
   input  logic [ 6:0] cbus_awaddr,
@@ -157,15 +147,13 @@ module test_csr #(
 endmodule;
 ```
 
-</div>
-</div>
+</td></tr></table>
 
 ### Combinational Circuit
 
-<div class="c">
-<div class="i">
+<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
-```rust:
+```rust
 let mut module = Module::new("sample_mod");
 module.input("in0", 0, 0);
 module.input("in1", 0, 0);
@@ -182,45 +170,37 @@ comb.default()
 Comb::build(module, comb);
 ```
 
-</div>
-<div class="i">
+</td><td>
 
-```verilog:
+```verilog
 ```
 
-</div>
-</div>
+</td></tr></table>
 
 ### State Machine
 
-<div class="c">
-<div class="i">
+<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
-```rust:
+```rust
 ```
 
-</div>
-<div class="i">
+</td><td>
 
-```verilog:
+```verilog
 ```
 
-</div>
-</div>
+</td></tr></table>
 
 ### And More Builders!
 
-<div class="c">
-<div class="i">
+<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
-```rust:
+```rust
 ```
 
-</div>
-<div class="i">
+</td><td>
 
-```verilog:
+```verilog
 ```
 
-</div>
-</div>
+</td></tr></table>

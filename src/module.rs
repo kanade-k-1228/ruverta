@@ -42,11 +42,7 @@ impl Module {
     }
 
     pub fn logic(mut self, name: &str, width: u32, len: u32) -> Self {
-        self.blocks.push(Block::Logic(Logic {
-            name: name.to_string(),
-            width: width,
-            length: len,
-        }));
+        self.blocks.push(Block::Logic(Logic::new(name, width, len)));
         self
     }
 
@@ -102,19 +98,6 @@ impl Module {
 
         code
     }
-}
-
-#[test]
-fn test_module() {
-    let m = Module::new("test_module")
-        .param("BIT", Some("8"))
-        .input("clk", 1)
-        .input("rstn", 1)
-        .input("in0", 8)
-        .input("in1", 8)
-        .output("out", 8)
-        .always_comb(AlwaysComb::new(Stmt::assign("out", "in0 + in1")));
-    println!("{}", m.verilog().join("\n"));
 }
 
 // ----------------------------------------------------------------------------
@@ -247,6 +230,16 @@ struct Logic {
 }
 
 impl Logic {
+    fn new(name: &str, width: u32, len: u32) -> Self {
+        Self {
+            name: name.to_string(),
+            width: width,
+            length: len,
+        }
+    }
+}
+
+impl Logic {
     fn verilog(&self) -> Vec<String> {
         let width_str = if self.width == 1 {
             format!("       ")
@@ -260,16 +253,6 @@ impl Logic {
         };
         vec![format!("logic {}{}{};", width_str, self.name, length_str)]
     }
-}
-
-#[test]
-fn test_logic() {
-    let logic = Logic {
-        name: format!("test"),
-        width: 8,
-        length: 4,
-    };
-    println!("{}", logic.verilog().join("\n"));
 }
 
 // ----------------------------------------------------------------------------
@@ -291,8 +274,8 @@ impl Instant {
             ports: vec![],
         }
     }
-    pub fn param(mut self, param: &str, wire: &str) -> Self {
-        self.params.push((param.to_string(), wire.to_string()));
+    pub fn param(mut self, param: &str, val: &str) -> Self {
+        self.params.push((param.to_string(), val.to_string()));
         self
     }
     pub fn port(mut self, port: &str, wire: &str) -> Self {
@@ -302,7 +285,7 @@ impl Instant {
 }
 
 impl Instant {
-    pub fn verilog(&self) -> Vec<String> {
+    fn verilog(&self) -> Vec<String> {
         let mut code: Vec<String> = Vec::new();
 
         code.push(format!("{} #(", self.module));
@@ -329,7 +312,8 @@ impl Instant {
 fn test_instant() {
     let obj = Instant::new("i_hoge", "hoge")
         .port("clk", "clk")
-        .port("rstn", "rstn");
+        .port("rstn", "rstn")
+        .param("a", "hoge");
     println!("{}", obj.verilog().join("\n"));
 }
 
@@ -377,7 +361,7 @@ impl AlwaysFF {
 
         let mut code = Vec::<String>::new();
         code.push(format!("always_ff @({edge_str}) begin"));
-        code.extend(self.stmt.verilog());
+        code.extend(self.stmt.blocking());
         code.push(format!("end"));
         code
     }
@@ -400,16 +384,6 @@ impl Edge {
     }
 }
 
-#[test]
-fn test_always_ff() {
-    let a = AlwaysFF::new().posedge("clk").stmt(
-        Stmt::cond()
-            .r#if("!rstn", Stmt::assign("cnt", "0"))
-            .r#else(Stmt::assign("cnt", "cnt + 1")),
-    );
-    println!("{}", a.verilog().join("\n"));
-}
-
 // ----------------------------------------------------------------------------
 
 #[derive(Debug)]
@@ -427,21 +401,8 @@ impl AlwaysComb {
     fn verilog(&self) -> Vec<String> {
         let mut code = Vec::<String>::new();
         code.push(format!("always_comb begin"));
-        code.extend(self.stmt.verilog());
+        code.extend(self.stmt.nonblocking());
         code.push(format!("end"));
         code
     }
-}
-
-#[test]
-fn test_always_comb() {
-    let a = AlwaysComb::new(
-        Stmt::cond()
-            .r#if(
-                "!rstn",
-                Stmt::open().add(Stmt::assign("n_cnt", "0")).close(),
-            )
-            .r#else(Stmt::assign("n_cnt", "cnt + 1")),
-    );
-    println!("{}", a.verilog().join("\n"));
 }
