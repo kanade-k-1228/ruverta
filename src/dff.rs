@@ -1,5 +1,5 @@
 use crate::{
-    module::{AlwaysFF, Module},
+    module::{Module, Sens},
     stmt::Stmt,
 };
 
@@ -22,42 +22,24 @@ impl Dff {
 }
 
 impl Module {
-    pub fn async_ff(mut self, seq: Dff) -> Self {
-        self = self.always_ff({
-            AlwaysFF::new().posedge(&seq.clk).negedge(&seq.rst).stmt(
-                Stmt::cond()
-                    .r#if(&format!("!{}", seq.rst), seq.init)
-                    .r#else(seq.stmt),
-            )
-        });
+    pub fn async_ff(mut self, clk: &str, rst: &str, init: Stmt, stmt: Stmt) -> Self {
+        let dff = Dff::new(clk, rst, init, stmt);
+        self = self.always_ff(
+            Sens::new().posedge(&dff.clk).negedge(&dff.rst),
+            Stmt::cond()
+                .r#if(&format!("!{}", dff.rst), dff.init)
+                .r#else(dff.stmt),
+        );
         self
     }
-    pub fn sync_ff(mut self, seq: Dff) -> Self {
-        self = self.always_ff({
-            AlwaysFF::new().posedge(&seq.clk).stmt(
-                Stmt::cond()
-                    .r#if(&format!("!{}", seq.rst), seq.init)
-                    .r#else(seq.stmt),
-            )
-        });
+    pub fn sync_ff(mut self, clk: &str, rst: &str, init: Stmt, stmt: Stmt) -> Self {
+        let dff = Dff::new(clk, rst, init, stmt);
+        self = self.always_ff(
+            Sens::new().posedge(&dff.clk),
+            Stmt::cond()
+                .r#if(&format!("!{}", dff.rst), dff.init)
+                .r#else(dff.stmt),
+        );
         self
     }
-}
-
-#[test]
-fn test_dff() {
-    let m = Module::new("test_mod")
-        .param("BIT", Some("8"))
-        .input("clk", 1)
-        .input("rstn", 1)
-        .input("in0", 8)
-        .input("in1", 8)
-        .output("out", 8)
-        .sync_ff(Dff::new(
-            "clk",
-            "rstn",
-            Stmt::open().add(Stmt::assign("out", "0")).close(),
-            Stmt::open().add(Stmt::assign("out", "in0 + in1")).close(),
-        ));
-    println!("{}", m.verilog().join("\n"));
 }

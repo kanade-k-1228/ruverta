@@ -5,3 +5,7 @@ edition = "2021"
 authors = ["kanade-k-1228"]
 
 [dependencies]
+
+[features]
+default = []
+dff = []

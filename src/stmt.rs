@@ -8,13 +8,13 @@ pub enum Stmt {
 }
 
 impl Stmt {
-    pub fn new() -> Self {
+    pub fn empty() -> Self {
         Self::Block(Block { body: vec![] })
     }
     pub fn assign(var: &str, val: &str) -> Self {
         Self::Assign(Assign::new(var, val))
     }
-    pub fn open() -> Block {
+    pub fn begin() -> Block {
         Block::begin()
     }
     pub fn cond() -> Cond {
@@ -87,11 +87,15 @@ impl Block {
     fn begin() -> Self {
         Self { body: vec![] }
     }
+    pub fn assign(mut self, var: &str, val: &str) -> Self {
+        self.body.push(Stmt::Assign(Assign::new(var, val)));
+        self
+    }
     pub fn add(mut self, stmt: Stmt) -> Self {
         self.body.push(stmt);
         self
     }
-    pub fn close(self) -> Stmt {
+    pub fn end(self) -> Stmt {
         Stmt::Block(self)
     }
 }

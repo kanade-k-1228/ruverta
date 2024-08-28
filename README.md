@@ -26,7 +26,7 @@ ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
 ```rust
-use ruverta::{Module, AlwaysComb, Stmt};
+use ruverta::{Module, Sens, Stmt};
 fn test_module() {
     let m = Module::new("test_module")
         .param("BIT", Some("8"))
@@ -35,7 +35,11 @@ fn test_module() {
         .input("in0", 8)
         .input("in1", 8)
         .output("out", 8)
-        .always_comb(AlwaysComb::new(Stmt::assign("out", "in0 + in1")));
+        .always_comb(Stmt::assign("out", "in0 + in1"))
+        .always_ff(
+            Sens::new().posedge("clk"),
+            Stmt::begin().add(Stmt::assign("a", "b")).end(),
+        );
     println!("{}", m.verilog().join("\n"));
 }
 ```
@@ -43,7 +47,7 @@ fn test_module() {
 </td><td>
 
 ```systemverilog
-module test_mod #(
+module test_module #(
   parameter BIT = 8
 ) (
   input  logic        clk,
@@ -52,9 +56,12 @@ module test_mod #(
   input  logic [ 7:0] in1,
   output logic [ 7:0] out
 );
-  always_comb begin
+  always_comb
     out = in0 + in1;
-  end
+  always_ff @(posedge clk)
+    begin
+      a <= b;
+    end
 endmodule;
 ```
 

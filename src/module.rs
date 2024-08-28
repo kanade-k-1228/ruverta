@@ -19,45 +19,40 @@ impl Module {
             blocks: vec![],
         }
     }
-
-    pub fn input(mut self, name: &str, width: u32) -> Self {
+    pub fn input(mut self, name: &str, width: usize) -> Self {
         assert!(width > 0);
         self.ports.push(Port::input(name, width, 1));
         self
     }
-    pub fn output(mut self, name: &str, width: u32) -> Self {
+    pub fn output(mut self, name: &str, width: usize) -> Self {
         assert!(width > 0);
         self.ports.push(Port::output(name, width, 1));
         self
     }
-    pub fn inout(mut self, name: &str, width: u32) -> Self {
+    pub fn inout(mut self, name: &str, width: usize) -> Self {
         assert!(width > 0);
         self.ports.push(Port::inout(name, width, 1));
         self
     }
-
     pub fn param(mut self, name: &str, default: Option<&str>) -> Self {
         self.params.push(Param::new(name, default));
         self
     }
-
-    pub fn logic(mut self, name: &str, width: u32, len: u32) -> Self {
+    pub fn logic(mut self, name: &str, width: usize, len: usize) -> Self {
         self.blocks.push(Block::Logic(Logic::new(name, width, len)));
         self
     }
-
     pub fn instant(mut self, inst: Instant) -> Self {
         self.blocks.push(Block::Instant(inst));
         self
     }
-
-    pub fn always_comb(mut self, a: AlwaysComb) -> Self {
-        self.blocks.push(Block::AlwaysComb(a));
+    pub fn always_comb(mut self, stmt: Stmt) -> Self {
+        self.blocks.push(Block::AlwaysComb(AlwaysComb::new(stmt)));
         self
     }
-
-    pub fn always_ff(mut self, a: AlwaysFF) -> Self {
-        self.blocks.push(Block::AlwaysFF(a));
+    pub fn always_ff(mut self, edges: Sens, stmt: Stmt) -> Self {
+        self.blocks
+            .push(Block::AlwaysFF(AlwaysFF::new(edges, stmt)));
         self
     }
 }
@@ -106,12 +101,12 @@ impl Module {
 struct Port {
     name: String,
     direct: Direct,
-    width: u32,
-    length: u32,
+    width: usize,
+    length: usize,
 }
 
 impl Port {
-    fn input(name: &str, width: u32, length: u32) -> Self {
+    fn input(name: &str, width: usize, length: usize) -> Self {
         Self {
             name: name.to_string(),
             direct: Direct::In,
@@ -119,7 +114,7 @@ impl Port {
             length,
         }
     }
-    fn output(name: &str, width: u32, length: u32) -> Self {
+    fn output(name: &str, width: usize, length: usize) -> Self {
         Self {
             name: name.to_string(),
             direct: Direct::Out,
@@ -127,7 +122,7 @@ impl Port {
             length,
         }
     }
-    fn inout(name: &str, width: u32, length: u32) -> Self {
+    fn inout(name: &str, width: usize, length: usize) -> Self {
         Self {
             name: name.to_string(),
             direct: Direct::InOut,
@@ -225,12 +220,12 @@ impl Block {
 #[derive(Debug)]
 struct Logic {
     name: String,
-    width: u32,
-    length: u32,
+    width: usize,
+    length: usize,
 }
 
 impl Logic {
-    fn new(name: &str, width: u32, len: u32) -> Self {
+    fn new(name: &str, width: usize, len: usize) -> Self {
         Self {
             name: name.to_string(),
             width: width,
@@ -321,16 +316,33 @@ fn test_instant() {
 
 #[derive(Debug)]
 pub struct AlwaysFF {
-    edges: Vec<Edge>,
+    sens: Sens,
     stmt: Stmt,
 }
 
 impl AlwaysFF {
+    pub fn new(sens: Sens, stmt: Stmt) -> Self {
+        Self { sens, stmt }
+    }
+}
+
+impl AlwaysFF {
+    fn verilog(&self) -> Vec<String> {
+        let mut code = Vec::<String>::new();
+        code.push(format!("always_ff @({})", self.sens.verilog()));
+        code.extend(self.stmt.blocking().iter().map(|s| format!("  {s}")));
+        code
+    }
+}
+
+#[derive(Debug)]
+pub struct Sens {
+    edges: Vec<Edge>,
+}
+
+impl Sens {
     pub fn new() -> Self {
-        Self {
-            edges: vec![],
-            stmt: Stmt::new(),
-        }
+        Self { edges: vec![] }
     }
     pub fn posedge(mut self, wire: &str) -> Self {
         self.edges.push(Edge::Posedge(wire.to_string()));
@@ -344,26 +356,15 @@ impl AlwaysFF {
         self.edges.push(Edge::Bothedge(wire.to_string()));
         self
     }
-    pub fn stmt(mut self, stmt: Stmt) -> Self {
-        self.stmt = stmt;
-        self
-    }
 }
 
-impl AlwaysFF {
-    fn verilog(&self) -> Vec<String> {
-        let edge_str = self
-            .edges
+impl Sens {
+    fn verilog(&self) -> String {
+        self.edges
             .iter()
             .map(|edge| edge.verilog())
             .collect::<Vec<_>>()
-            .join(" or ");
-
-        let mut code = Vec::<String>::new();
-        code.push(format!("always_ff @({edge_str}) begin"));
-        code.extend(self.stmt.blocking());
-        code.push(format!("end"));
-        code
+            .join(" or ")
     }
 }
 
@@ -400,9 +401,8 @@ impl AlwaysComb {
 impl AlwaysComb {
     fn verilog(&self) -> Vec<String> {
         let mut code = Vec::<String>::new();
-        code.push(format!("always_comb begin"));
-        code.extend(self.stmt.nonblocking());
-        code.push(format!("end"));
+        code.push(format!("always_comb"));
+        code.extend(self.stmt.nonblocking().iter().map(|s| format!("  {s}")));
         code
     }
 }
