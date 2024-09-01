@@ -4,7 +4,7 @@
 
 **Rust to Verilog: Very Simple Verilog Builder**
 
-English | [日本語](./docs/README_JP.md)
+English | [日本語](./doc/README_JP.md)
 
 </div>
 
