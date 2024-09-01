@@ -2,19 +2,19 @@
 
 # ruverta
 
-**Rust to Verilog: Very Simple Verilog Builder**
+**Rust で Verilog を書くための簡単なライブラリ**
 
-English | [日本語](./docs/README_JP.md)
+[English](../README.md) | 日本語
 
 </div>
 
-Only support tiny subset of sv.
+SystemVerilogの簡単なサブセットのみをサポートしています。
 
-- Only `logic`: no `reg` or `wire`
-- Only `always_ff` : no `always`
-- Only `always_comb` : no `assign`
+- 変数：`logic`のみ使用可能です。`reg` と `wire` はありません。
+- 組合回路：`always_comb`のみ使用可能です。 `assign`はありません。
+- 順序回路：`always_ff`のみ使用可能です。`always`はありません。
 
-## Install
+## インストール
 
 ```
 $ cargo add --git "https://github.com/kanade-k-1228/ruverta.git"
@@ -27,7 +27,11 @@ or
 ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
 ```
 
-## Basic module builder
+SystemVerilogの
+
+## 基本の使い方
+
+メソッドチェーンを用いてモジュールを作成します。
 
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
@@ -73,12 +77,11 @@ endmodule;
 
 </td></tr></table>
 
+APIの設計はわりと雑なので、リクエストあったらなんでもどうぞ～
+
 ## Advanced builder
 
-You can build some circuit easily.
-
-- DFF: Setup clock / reset
-- 
+さまざまなビルダーを拡張できます。
 
 ### Common Clock & Reset
 
