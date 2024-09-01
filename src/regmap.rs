@@ -1,4 +1,7 @@
-use crate::{dff::Dff, module::Module, stmt::Stmt};
+use crate::{
+    module::Module,
+    stmt::{Case, Stmt},
+};
 
 // ----------------------------------------------------------------------------
 
@@ -37,10 +40,74 @@ impl RegMap {
         self.list.push(Entry::new(RegType::Trigger, name, 1, 1));
         self
     }
+
+    fn awaddr(&self) -> String {
+        format!("{}_awaddr", self.name)
+    }
+    fn awvalid(&self) -> String {
+        format!("{}_awvalid", self.name)
+    }
+    fn awready(&self) -> String {
+        format!("{}_awready", self.name)
+    }
+
+    fn wdata(&self) -> String {
+        format!("{}_wdata", self.name)
+    }
+    fn wstrb(&self) -> String {
+        format!("{}_wstrb", self.name)
+    }
+    fn wvalid(&self) -> String {
+        format!("{}_wvalid", self.name)
+    }
+    fn wready(&self) -> String {
+        format!("{}_wready", self.name)
+    }
+
+    fn bresp(&self) -> String {
+        format!("{}_bresp", self.name)
+    }
+    fn bvalid(&self) -> String {
+        format!("{}_bvalid", self.name)
+    }
+    fn bready(&self) -> String {
+        format!("{}_bready", self.name)
+    }
+
+    fn araddr(&self) -> String {
+        format!("{}_araddr", self.name)
+    }
+    fn arvalid(&self) -> String {
+        format!("{}_arvalid", self.name)
+    }
+    fn arready(&self) -> String {
+        format!("{}_arready", self.name)
+    }
+
+    fn rdata(&self) -> String {
+        format!("{}_rdata", self.name)
+    }
+    fn rresp(&self) -> String {
+        format!("{}_rresp", self.name)
+    }
+    fn rvalid(&self) -> String {
+        format!("{}_rvalid", self.name)
+    }
+    fn rready(&self) -> String {
+        format!("{}_rready", self.name)
+    }
+}
+
+fn clog2(n: u32) -> Option<u32> {
+    if n == 0 {
+        None
+    } else {
+        Some(32 - (n - 1).leading_zeros())
+    }
 }
 
 impl Module {
-    pub fn regmap(mut self, regmap: RegMap) -> Self {
+    pub fn regmap(mut self, clk: &str, rst: &str, regmap: RegMap) -> Self {
         // Allocate Registors
         let alocated = regmap
             .list
@@ -52,139 +119,148 @@ impl Module {
                 Some((begin, end, entry))
             })
             .collect::<Vec<_>>();
-        let addr_width = alocated.last().map(|(_, last, _)| *last).unwrap_or(7);
+        let addr_width = {
+            let regcnt = alocated.last().map(|(_, last, _)| *last).unwrap_or(64);
+            clog2(regcnt as u32).unwrap_or(6) as usize
+        };
 
         // IO Port
         self = self
-            .input(&format!("{}_awaddr", regmap.name), addr_width)
-            .input(&format!("{}_awvalid", regmap.name), 1)
-            .output(&format!("{}_awready", regmap.name), 1)
-            .input(&format!("{}_wdata", regmap.name), regmap.bit)
-            .input(&format!("{}_wstrb", regmap.name), regmap.bit / 8)
-            .input(&format!("{}_wvalid", regmap.name), 1)
-            .output(&format!("{}_wready", regmap.name), 1)
-            .output(&format!("{}_bresp", regmap.name), 2)
-            .output(&format!("{}_bvalid", regmap.name), 1)
-            .input(&format!("{}_bready", regmap.name), 1)
-            .input(&format!("{}_araddr", regmap.name), addr_width)
-            .input(&format!("{}_arvalid", regmap.name), 1)
-            .output(&format!("{}_arready", regmap.name), 1)
-            .output(&format!("{}_rdata", regmap.name), regmap.bit)
-            .output(&format!("{}_rvalid", regmap.name), 1)
-            .input(&format!("{}_rready", regmap.name), 1);
+            .input(&regmap.awaddr(), addr_width)
+            .input(&regmap.awvalid(), 1)
+            .output(&regmap.awready(), 1)
+            .input(&regmap.wdata(), regmap.bit)
+            .input(&regmap.wstrb(), regmap.bit / 8)
+            .input(&regmap.wvalid(), 1)
+            .output(&regmap.wready(), 1)
+            .output(&regmap.bresp(), 2)
+            .output(&regmap.bvalid(), 1)
+            .input(&regmap.bready(), 1)
+            .input(&regmap.araddr(), addr_width)
+            .input(&regmap.arvalid(), 1)
+            .output(&regmap.arready(), 1)
+            .output(&regmap.rdata(), regmap.bit)
+            .output(&regmap.rresp(), 2)
+            .output(&regmap.rvalid(), 1)
+            .input(&regmap.rready(), 1);
 
         // Regs
         for (_, _, entry) in &alocated {
             self = match entry.ty {
-                RegType::ReadWrite => self.logic(&entry.rname(), entry.bit, entry.len),
-                RegType::ReadOnly => self.logic(&entry.rname(), entry.bit, entry.len),
-                RegType::Trigger => self
-                    .logic(&format!("{}_trig", entry.rname()), entry.bit, entry.len)
-                    .logic(&format!("{}_resp", entry.rname()), entry.bit, entry.len),
+                RegType::ReadWrite => self.logic(&entry.name, entry.bit, entry.len),
+                RegType::ReadOnly => self.logic(&entry.name, entry.bit, entry.len),
+                RegType::Trigger => self.logic(&entry.rname(), entry.bit, entry.len).logic(
+                    &entry.wname(),
+                    entry.bit,
+                    entry.len,
+                ),
             };
         }
 
-        // Write Addr
-        self = self.logic("aw_en", 1, 1).sync_ff(
-            "clk",
-            "rstn",
+        // Write Logic
+        self = self.sync_ff(
+            clk,
+            rst,
+            {
+                alocated
+                    .iter()
+                    .fold(Stmt::begin(), |stmt, (_, _, entry)| {
+                        stmt.assign(&entry.wname(), "0")
+                    })
+                    .end()
+            },
             Stmt::begin()
-                .assign("axi_awready", "0")
-                .assign("aw_en", "1'b1")
+                .r#if(
+                    &format!("{} && {}", regmap.wvalid(), regmap.awvalid()),
+                    Stmt::begin()
+                        .case(alocated.iter().fold(
+                            Case::new(&regmap.awaddr()),
+                            |case, (addr, _, entry)| {
+                                case.case(
+                                    &format!("{}", addr),
+                                    Stmt::assign(&entry.wname(), &regmap.wdata()),
+                                )
+                            },
+                        ))
+                        .end(),
+                )
                 .end(),
-            Stmt::cond()
-                .r#if(
-                    "~axi_awready && S_AXI_AWVALID && S_AXI_WVALID && aw_en",
-                    Stmt::begin()
-                        .assign("axi_awready", "1")
-                        .assign("aw_en", "0")
-                        .end(),
-                )
-                .r#if(
-                    "S_AXI_BREADY && axi_bvalid",
-                    Stmt::begin()
-                        .assign("axi_awready", "0")
-                        .assign("aw_en", "1")
-                        .end(),
-                )
-                .r#else(Stmt::begin().assign("axi_awready", "0").end()),
         );
 
+        // Read Logic
         self = self.sync_ff(
-            "clk",
-            "rstn",
-            Stmt::assign("axi_awaddr", "0"),
-            Stmt::cond()
-                .r#if(
-                    "~axi_awready && S_AXI_AWVALID && S_AXI_WVALID && aw_en",
-                    Stmt::assign("axi_awaddr", "S"),
-                )
-                .r#else(Stmt::empty()),
-        );
-
-        // Write Response
-        self = self.sync_ff(
-            "clk",
-            "rstn",
+            clk,
+            rst,
+            Stmt::assign(&regmap.rdata(), "0"),
             Stmt::begin()
-                .assign("axi_bvalid", "0")
-                .assign("axi_bresp", "2'b0")
-                .end(),
-            Stmt::cond()
                 .r#if(
-                    "axi_awready && S_AXI_AWVALID && ~axi_bvalid && axi_wready && S_AXI_WVALID",
+                    &regmap.arvalid(),
                     Stmt::begin()
-                        .assign("axi_bvalid", "1")
-                        .assign("axi_bresp", "0")
+                        .case({
+                            let cases = alocated.iter().fold(
+                                Case::new(&regmap.araddr()),
+                                |case, (addr, _, entry)| {
+                                    case.case(
+                                        &format!("{}", addr),
+                                        Stmt::assign(&regmap.rdata(), &entry.rname()),
+                                    )
+                                },
+                            );
+                            cases
+                        })
                         .end(),
                 )
-                .r#if(
-                    "S_AXI_BREADY && axi_bvalid",
-                    Stmt::assign("axi_bvalid", "0"),
-                )
-                .r#else(Stmt::empty()),
+                .end(),
         );
 
-        // Read Address
+        // AXI Lite Protocol
         self = self.sync_ff(
-            "clk",
-            "rstn",
+            clk,
+            rst,
             Stmt::begin()
-                .assign("axi_arready", "0")
-                .assign("axi_araddr", "32'b0")
+                .assign(&regmap.awready(), "0")
+                .assign(&regmap.wready(), "0")
+                .assign(&regmap.bvalid(), "0")
+                .assign(&regmap.arready(), "0")
+                .assign(&regmap.rvalid(), "0")
+                .assign(&regmap.bresp(), "0")
+                .assign(&regmap.rresp(), "0")
                 .end(),
-            Stmt::cond()
-                .r#if(
-                    "~axi_arready && S_AXI_ARVALID",
-                    Stmt::begin()
-                        .assign("axi_arready", "1")
-                        .assign("axi_araddr", "S_AXI_ARADDR")
-                        .end(),
-                )
-                .r#else(Stmt::assign("axi_arready", "0")),
-        );
-
-        // Read Data
-        self = self.sync_ff(
-            "clk",
-            "rstn",
             Stmt::begin()
-                .assign("axi_rvalid", "0")
-                .assign("axi_rresp", "0")
+                .assign(
+                    &regmap.awready(),
+                    &format!("{} && !{}", regmap.awvalid(), regmap.awready()),
+                )
+                .assign(
+                    &regmap.wready(),
+                    &format!("{} && !{}", regmap.wvalid(), regmap.wready()),
+                )
+                .assign(
+                    &regmap.bvalid(),
+                    &format!(
+                        "{} && {} && !{}",
+                        regmap.awready(),
+                        regmap.wready(),
+                        regmap.bvalid()
+                    ),
+                )
+                .assign(
+                    &regmap.arready(),
+                    &format!("{} && !{}", regmap.arvalid(), regmap.arready()),
+                )
+                .assign(
+                    &regmap.rvalid(),
+                    &format!("{} && !{}", regmap.arvalid(), regmap.arready()),
+                )
+                .r#if(
+                    &format!("{} && {}", regmap.bvalid(), regmap.bready()),
+                    Stmt::assign(&regmap.bvalid(), "0"),
+                )
+                .r#if(
+                    &format!("{} && {}", regmap.rvalid(), regmap.rready()),
+                    Stmt::assign(&regmap.rvalid(), "0"),
+                )
                 .end(),
-            Stmt::cond()
-                .r#if(
-                    "axi_arready && S_AXI_ARVALID && ~axi_rvalid",
-                    Stmt::begin()
-                        .assign("axi_rvalid", "1")
-                        .assign("axi_rresp", "2'b0")
-                        .end(),
-                )
-                .r#if(
-                    "axi_rvalid && S_AXI_RREADY",
-                    Stmt::assign("axi_rvalid", "0"),
-                )
-                .r#else(Stmt::begin().end()),
         );
 
         self
@@ -193,11 +269,11 @@ impl Module {
     pub fn regio(mut self, config: &RegMap) -> Self {
         for reg in &config.list {
             self = match reg.ty {
-                RegType::ReadWrite => self.output(&reg.rname(), reg.bit),
-                RegType::ReadOnly => self.input(&reg.rname(), reg.bit),
+                RegType::ReadWrite => self.output(&reg.name, reg.bit),
+                RegType::ReadOnly => self.input(&reg.name, reg.bit),
                 RegType::Trigger => self
-                    .output(&format!("{}_trig", reg.rname()), reg.bit)
-                    .input(&format!("{}_resp", reg.rname()), reg.bit),
+                    .output(&format!("{}_trig", reg.name), reg.bit)
+                    .input(&format!("{}_resp", reg.name), reg.bit),
             };
         }
         self
@@ -232,11 +308,19 @@ impl Entry {
             len,
         }
     }
+
+    fn wname(&self) -> String {
+        match self.ty {
+            RegType::ReadWrite => self.name.clone(),
+            RegType::ReadOnly => self.name.clone(),
+            RegType::Trigger => format!("{}_trig", self.name),
+        }
+    }
     fn rname(&self) -> String {
         match self.ty {
-            RegType::ReadWrite => format!("rw_{}", self.name),
-            RegType::ReadOnly => format!("ro_{}", self.name),
-            RegType::Trigger => format!("tw_{}", self.name),
+            RegType::ReadWrite => self.name.clone(),
+            RegType::ReadOnly => self.name.clone(),
+            RegType::Trigger => format!("{}_resp", self.name),
         }
     }
 }

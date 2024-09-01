@@ -26,9 +26,10 @@ impl Module {
         let dff = Dff::new(clk, rst, init, stmt);
         self = self.always_ff(
             Sens::new().posedge(&dff.clk).negedge(&dff.rst),
-            Stmt::cond()
+            Stmt::begin()
                 .r#if(&format!("!{}", dff.rst), dff.init)
-                .r#else(dff.stmt),
+                .r#else(dff.stmt)
+                .end(),
         );
         self
     }
@@ -36,9 +37,10 @@ impl Module {
         let dff = Dff::new(clk, rst, init, stmt);
         self = self.always_ff(
             Sens::new().posedge(&dff.clk),
-            Stmt::cond()
+            Stmt::begin()
                 .r#if(&format!("!{}", dff.rst), dff.init)
-                .r#else(dff.stmt),
+                .r#else(dff.stmt)
+                .end(),
         );
         self
     }

@@ -89,7 +89,7 @@ impl Module {
             }
         }
 
-        code.push(format!("endmodule;"));
+        code.push(format!("endmodule"));
 
         code
     }

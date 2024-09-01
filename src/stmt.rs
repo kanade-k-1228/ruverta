@@ -4,21 +4,21 @@
 pub enum Stmt {
     Block(Block),
     Assign(Assign),
-    Cond(Cond),
+    Case(Case),
+    If(String, Box<Stmt>),
+    ElIf(String, Box<Stmt>),
+    Else(Box<Stmt>),
 }
 
 impl Stmt {
     pub fn empty() -> Self {
         Self::Block(Block { body: vec![] })
     }
-    pub fn assign(var: &str, val: &str) -> Self {
-        Self::Assign(Assign::new(var, val))
-    }
     pub fn begin() -> Block {
         Block::begin()
     }
-    pub fn cond() -> Cond {
-        Cond::new()
+    pub fn assign(var: &str, val: &str) -> Self {
+        Self::Assign(Assign::new(var, val))
     }
 }
 
@@ -32,45 +32,23 @@ impl Stmt {
 
     fn verilog(&self, assign_op: &str) -> Vec<String> {
         match self {
-            Stmt::Block(Block { body }) => {
-                let mut blk_str = vec!["begin".to_string()];
-                blk_str.extend(
-                    body.iter()
-                        .flat_map(|stmt| {
-                            stmt.verilog(assign_op)
-                                .iter()
-                                .map(|s| format!("  {s}"))
-                                .collect::<Vec<_>>()
-                        })
-                        .collect::<Vec<_>>(),
-                );
-                blk_str.push("end".to_string());
-                blk_str
+            Stmt::Block(block) => block.verilog(assign_op),
+            Stmt::Assign(assign) => vec![assign.verilog(assign_op)],
+            Stmt::Case(case) => case.verilog(assign_op),
+            Stmt::If(cond, stmt) => {
+                let mut ret = vec![format!("if ({})", cond)];
+                ret.extend(stmt.verilog(assign_op).iter().map(|s| format!("  {s}")));
+                ret
             }
-            Stmt::Assign(Assign { var, val }) => {
-                vec![format!("{var} {assign_op} {val};")]
+            Stmt::ElIf(cond, stmt) => {
+                let mut ret = vec![format!("else if ({})", cond)];
+                ret.extend(stmt.verilog(assign_op).iter().map(|s| format!("  {s}")));
+                ret
             }
-            Stmt::Cond(Cond { if_, else_ }) => {
-                let mut a = if_
-                    .iter()
-                    .enumerate()
-                    .flat_map(|(i, (cond, body))| {
-                        if i == 0 {
-                            let mut a = vec![format!("if ({})", cond)];
-                            a.extend(body.verilog(assign_op).iter().map(|s| format!("  {s}")));
-                            a
-                        } else {
-                            let mut a = vec![format!("else if ({})", cond)];
-                            a.extend(body.verilog(assign_op).iter().map(|s| format!("  {s}")));
-                            a
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                if let Some(else_) = else_ {
-                    a.extend(vec![format!("else")]);
-                    a.extend(else_.verilog(assign_op).iter().map(|s| format!("  {s}")));
-                }
-                a
+            Stmt::Else(stmt) => {
+                let mut ret = vec![format!("else")];
+                ret.extend(stmt.verilog(assign_op).iter().map(|s| format!("  {s}")));
+                ret
             }
         }
     }
@@ -91,12 +69,47 @@ impl Block {
         self.body.push(Stmt::Assign(Assign::new(var, val)));
         self
     }
+    pub fn case(mut self, case: Case) -> Self {
+        self.body.push(Stmt::Case(case));
+        self
+    }
+    pub fn r#if(mut self, cond: &str, stmt: Stmt) -> Self {
+        self.body.push(Stmt::If(cond.to_string(), Box::new(stmt)));
+        self
+    }
+    pub fn elif(mut self, cond: &str, stmt: Stmt) -> Self {
+        self.body.push(Stmt::ElIf(cond.to_string(), Box::new(stmt)));
+        self
+    }
+    pub fn r#else(mut self, stmt: Stmt) -> Self {
+        self.body.push(Stmt::Else(Box::new(stmt)));
+        self
+    }
     pub fn add(mut self, stmt: Stmt) -> Self {
         self.body.push(stmt);
         self
     }
     pub fn end(self) -> Stmt {
         Stmt::Block(self)
+    }
+}
+
+impl Block {
+    fn verilog(&self, assign_op: &str) -> Vec<String> {
+        let mut blk_str = vec!["begin".to_string()];
+        blk_str.extend(
+            self.body
+                .iter()
+                .flat_map(|stmt| {
+                    stmt.verilog(assign_op)
+                        .iter()
+                        .map(|s| format!("  {s}"))
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>(),
+        );
+        blk_str.push("end".to_string());
+        blk_str
     }
 }
 
@@ -117,29 +130,52 @@ impl Assign {
     }
 }
 
+impl Assign {
+    fn verilog(&self, assign_op: &str) -> String {
+        format!("{} {assign_op} {};", self.var, self.val)
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 #[derive(Debug)]
-pub struct Cond {
-    if_: Vec<(String, Stmt)>,
-    else_: Option<Box<Stmt>>,
+pub struct Case {
+    var: String,
+    case: Vec<(String, Stmt)>,
+    default: Option<Box<Stmt>>,
 }
 
-impl Cond {
-    fn new() -> Self {
-        Cond {
-            if_: vec![],
-            else_: None,
+impl Case {
+    pub fn new(var: &str) -> Self {
+        Self {
+            var: var.to_string(),
+            case: vec![],
+            default: None,
         }
     }
-
-    pub fn r#if(mut self, cond: &str, body: Stmt) -> Self {
-        self.if_.push((cond.to_string(), body));
+    pub fn case(mut self, cond: &str, stmt: Stmt) -> Self {
+        self.case.push((cond.to_string(), stmt));
         self
     }
+    pub fn default(mut self, stmt: Stmt) -> Self {
+        self.default = Some(Box::new(stmt));
+        self
+    }
+}
 
-    pub fn r#else(mut self, body: Stmt) -> Stmt {
-        self.else_ = Some(Box::new(body));
-        Stmt::Cond(self)
+impl Case {
+    fn verilog(&self, assign_op: &str) -> Vec<String> {
+        let mut ret = Vec::<String>::new();
+        ret.push(format!("case ({})", self.var));
+        let a = self.case.iter().flat_map(|(cond, stmt)| {
+            if let Stmt::Assign(a) = stmt {
+                vec![format!("  {}: {}", cond, a.verilog(assign_op))]
+            } else {
+                todo!()
+            }
+        });
+        ret.extend(a);
+        ret.push(format!("endcase"));
+        ret
     }
 }

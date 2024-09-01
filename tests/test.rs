@@ -8,6 +8,8 @@ fn test_uart() {
         .output("tx", 1)
         .input("rx", 1)
         .regmap(
+            "clk",
+            "rstn",
             RegMap::new("csr", 32)
                 .read_write("div", 32, 1)
                 .read_write("tx_data", 8, 1)
