@@ -1,6 +1,7 @@
 use crate::{
     module::Module,
     stmt::{Case, Stmt},
+    util::clog2,
 };
 
 // ----------------------------------------------------------------------------
@@ -10,6 +11,33 @@ pub struct RegMap {
     name: String,
     bit: usize,
     list: Vec<Entry>,
+
+    // Write Addr
+    awaddr: String,
+    awvalid: String,
+    awready: String,
+
+    // Write Data
+    wdata: String,
+    wstrb: String,
+    wvalid: String,
+    wready: String,
+
+    // Write Response
+    bresp: String,
+    bvalid: String,
+    bready: String,
+
+    // Read Addr
+    araddr: String,
+    arvalid: String,
+    arready: String,
+
+    // Read Data
+    rdata: String,
+    rresp: String,
+    rvalid: String,
+    rready: String,
 }
 
 impl RegMap {
@@ -19,6 +47,23 @@ impl RegMap {
             name: name.to_string(),
             bit,
             list: vec![],
+            awaddr: format!("{name}_awaddr"),
+            awvalid: format!("{name}_awvalid"),
+            awready: format!("{name}_awready"),
+            wdata: format!("{name}_wdata"),
+            wstrb: format!("{name}_wstrb"),
+            wvalid: format!("{name}_wvalid"),
+            wready: format!("{name}_wready"),
+            bresp: format!("{name}_bresp"),
+            bvalid: format!("{name}_bvalid"),
+            bready: format!("{name}_bready"),
+            araddr: format!("{name}_araddr"),
+            arvalid: format!("{name}_arvalid"),
+            arready: format!("{name}_arready"),
+            rdata: format!("{name}_rdata"),
+            rresp: format!("{name}_rresp"),
+            rvalid: format!("{name}_rvalid"),
+            rready: format!("{name}_rready"),
         }
     }
 
@@ -40,70 +85,6 @@ impl RegMap {
         self.list.push(Entry::new(RegType::Trigger, name, 1, 1));
         self
     }
-
-    fn awaddr(&self) -> String {
-        format!("{}_awaddr", self.name)
-    }
-    fn awvalid(&self) -> String {
-        format!("{}_awvalid", self.name)
-    }
-    fn awready(&self) -> String {
-        format!("{}_awready", self.name)
-    }
-
-    fn wdata(&self) -> String {
-        format!("{}_wdata", self.name)
-    }
-    fn wstrb(&self) -> String {
-        format!("{}_wstrb", self.name)
-    }
-    fn wvalid(&self) -> String {
-        format!("{}_wvalid", self.name)
-    }
-    fn wready(&self) -> String {
-        format!("{}_wready", self.name)
-    }
-
-    fn bresp(&self) -> String {
-        format!("{}_bresp", self.name)
-    }
-    fn bvalid(&self) -> String {
-        format!("{}_bvalid", self.name)
-    }
-    fn bready(&self) -> String {
-        format!("{}_bready", self.name)
-    }
-
-    fn araddr(&self) -> String {
-        format!("{}_araddr", self.name)
-    }
-    fn arvalid(&self) -> String {
-        format!("{}_arvalid", self.name)
-    }
-    fn arready(&self) -> String {
-        format!("{}_arready", self.name)
-    }
-
-    fn rdata(&self) -> String {
-        format!("{}_rdata", self.name)
-    }
-    fn rresp(&self) -> String {
-        format!("{}_rresp", self.name)
-    }
-    fn rvalid(&self) -> String {
-        format!("{}_rvalid", self.name)
-    }
-    fn rready(&self) -> String {
-        format!("{}_rready", self.name)
-    }
-}
-
-fn clog2(n: u32) -> Option<u32> {
-    if n == 0 {
-        None
-    } else {
-        Some(32 - (n - 1).leading_zeros())
-    }
 }
 
 impl Module {
@@ -121,28 +102,28 @@ impl Module {
             .collect::<Vec<_>>();
         let addr_width = {
             let regcnt = alocated.last().map(|(_, last, _)| *last).unwrap_or(64);
-            clog2(regcnt as u32).unwrap_or(6) as usize
+            clog2(regcnt).unwrap_or(6)
         };
 
         // IO Port
         self = self
-            .input(&regmap.awaddr(), addr_width)
-            .input(&regmap.awvalid(), 1)
-            .output(&regmap.awready(), 1)
-            .input(&regmap.wdata(), regmap.bit)
-            .input(&regmap.wstrb(), regmap.bit / 8)
-            .input(&regmap.wvalid(), 1)
-            .output(&regmap.wready(), 1)
-            .output(&regmap.bresp(), 2)
-            .output(&regmap.bvalid(), 1)
-            .input(&regmap.bready(), 1)
-            .input(&regmap.araddr(), addr_width)
-            .input(&regmap.arvalid(), 1)
-            .output(&regmap.arready(), 1)
-            .output(&regmap.rdata(), regmap.bit)
-            .output(&regmap.rresp(), 2)
-            .output(&regmap.rvalid(), 1)
-            .input(&regmap.rready(), 1);
+            .input(&regmap.awaddr, addr_width)
+            .input(&regmap.awvalid, 1)
+            .output(&regmap.awready, 1)
+            .input(&regmap.wdata, regmap.bit)
+            .input(&regmap.wstrb, regmap.bit / 8)
+            .input(&regmap.wvalid, 1)
+            .output(&regmap.wready, 1)
+            .output(&regmap.bresp, 2)
+            .output(&regmap.bvalid, 1)
+            .input(&regmap.bready, 1)
+            .input(&regmap.araddr, addr_width)
+            .input(&regmap.arvalid, 1)
+            .output(&regmap.arready, 1)
+            .output(&regmap.rdata, regmap.bit)
+            .output(&regmap.rresp, 2)
+            .output(&regmap.rvalid, 1)
+            .input(&regmap.rready, 1);
 
         // Regs
         for (_, _, entry) in &alocated {
@@ -171,14 +152,14 @@ impl Module {
             },
             Stmt::begin()
                 .r#if(
-                    &format!("{} && {}", regmap.wvalid(), regmap.awvalid()),
+                    &format!("{} && {}", regmap.wvalid, regmap.awvalid),
                     Stmt::begin()
                         .case(alocated.iter().fold(
-                            Case::new(&regmap.awaddr()),
+                            Case::new(&regmap.awaddr),
                             |case, (addr, _, entry)| {
                                 case.case(
                                     &format!("{}", addr),
-                                    Stmt::assign(&entry.wname(), &regmap.wdata()),
+                                    Stmt::assign(&entry.wname(), &regmap.wdata),
                                 )
                             },
                         ))
@@ -191,18 +172,18 @@ impl Module {
         self = self.sync_ff(
             clk,
             rst,
-            Stmt::assign(&regmap.rdata(), "0"),
+            Stmt::assign(&regmap.rdata, "0"),
             Stmt::begin()
                 .r#if(
-                    &regmap.arvalid(),
+                    &regmap.arvalid,
                     Stmt::begin()
                         .case({
                             let cases = alocated.iter().fold(
-                                Case::new(&regmap.araddr()),
+                                Case::new(&regmap.araddr),
                                 |case, (addr, _, entry)| {
                                     case.case(
                                         &format!("{}", addr),
-                                        Stmt::assign(&regmap.rdata(), &entry.rname()),
+                                        Stmt::assign(&regmap.rdata, &entry.rname()),
                                     )
                                 },
                             );
@@ -218,47 +199,45 @@ impl Module {
             clk,
             rst,
             Stmt::begin()
-                .assign(&regmap.awready(), "0")
-                .assign(&regmap.wready(), "0")
-                .assign(&regmap.bvalid(), "0")
-                .assign(&regmap.arready(), "0")
-                .assign(&regmap.rvalid(), "0")
-                .assign(&regmap.bresp(), "0")
-                .assign(&regmap.rresp(), "0")
+                .assign(&regmap.awready, "0")
+                .assign(&regmap.wready, "0")
+                .assign(&regmap.bvalid, "0")
+                .assign(&regmap.arready, "0")
+                .assign(&regmap.rvalid, "0")
+                .assign(&regmap.bresp, "0")
+                .assign(&regmap.rresp, "0")
                 .end(),
             Stmt::begin()
                 .assign(
-                    &regmap.awready(),
-                    &format!("{} && !{}", regmap.awvalid(), regmap.awready()),
+                    &regmap.awready,
+                    &format!("{} && !{}", regmap.awvalid, regmap.awready),
                 )
                 .assign(
-                    &regmap.wready(),
-                    &format!("{} && !{}", regmap.wvalid(), regmap.wready()),
+                    &regmap.wready,
+                    &format!("{} && !{}", regmap.wvalid, regmap.wready),
                 )
                 .assign(
-                    &regmap.bvalid(),
+                    &regmap.bvalid,
                     &format!(
                         "{} && {} && !{}",
-                        regmap.awready(),
-                        regmap.wready(),
-                        regmap.bvalid()
+                        regmap.awready, regmap.wready, regmap.bvalid
                     ),
                 )
                 .assign(
-                    &regmap.arready(),
-                    &format!("{} && !{}", regmap.arvalid(), regmap.arready()),
+                    &regmap.arready,
+                    &format!("{} && !{}", regmap.arvalid, regmap.arready),
                 )
                 .assign(
-                    &regmap.rvalid(),
-                    &format!("{} && !{}", regmap.arvalid(), regmap.arready()),
+                    &regmap.rvalid,
+                    &format!("{} && !{}", regmap.arvalid, regmap.arready),
                 )
                 .r#if(
-                    &format!("{} && {}", regmap.bvalid(), regmap.bready()),
-                    Stmt::assign(&regmap.bvalid(), "0"),
+                    &format!("{} && {}", regmap.bvalid, regmap.bready),
+                    Stmt::assign(&regmap.bvalid, "0"),
                 )
                 .r#if(
-                    &format!("{} && {}", regmap.rvalid(), regmap.rready()),
-                    Stmt::assign(&regmap.rvalid(), "0"),
+                    &format!("{} && {}", regmap.rvalid, regmap.rready),
+                    Stmt::assign(&regmap.rvalid, "0"),
                 )
                 .end(),
         );

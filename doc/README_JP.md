@@ -81,9 +81,16 @@ APIの設計はわりと雑なので、リクエストあったらなんでも�
 
 ## Advanced builder
 
-さまざまなビルダーを拡張できます。
+| Func   | Rust                            | Verilog                                      |
+| ------ | ------------------------------- | -------------------------------------------- |
+| DFF    | [dff.rs](../tests/dff.rs)       | [dff.sv](../tests/verilog/test_dff.sv)       |
+| Comb   | [comb.rs](../tests/comb.rs)     | [comb.sv](../tests/verilog/test_comb.sv)     |
+| FSM    | [fsm.rs](../tests/fsm.rs)       | [fsm.sv](../tests/verilog/test_fsm.sv)       |
+| CSR    | [regmap.rs](../tests/regmap.rs) | [regmap.sv](../tests/verilog/test_regmap.sv) |
+| Stream | [stream.rs](../tests/stream.rs) | [stream.sv](../tests/verilog/test_stream.sv) |
+| FIFO   | [fifo.rs](../tests/fifo.rs)     | [fifo.sv](../tests/verilog/test_fifo.sv)     |
 
-### Common Clock & Reset
+### DFF: 共通クロック・リセット
 
 You can write `always_ff` slight easily.
 
@@ -113,7 +120,7 @@ fn test_sm(){
 
 </td></tr></table>
 
-### CSR Bus
+### レジスタ
 
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
@@ -165,7 +172,7 @@ endmodule;
 
 </td></tr></table>
 
-### Combinational Circuit
+### 組合回路
 
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
@@ -193,7 +200,9 @@ Comb::build(module, comb);
 
 </td></tr></table>
 
-### State Machine
+### 状態機械
+
+状態変数が１つのステートマシンを構築します。
 
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
@@ -206,6 +215,14 @@ Comb::build(module, comb);
 ```
 
 </td></tr></table>
+
+### Stream
+
+AXI Stream を簡単に実装します。
+
+### FIFO
+
+FIFO を簡単に実装します。
 
 ### And More Builders!
 

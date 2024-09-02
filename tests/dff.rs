@@ -1,8 +1,9 @@
 use ruverta::{module::Module, stmt::Stmt};
+use std::{fs, path::PathBuf};
 
 #[test]
 fn test_dff() {
-    let m = Module::new("test_mod")
+    let m = Module::new("test_dff")
         .param("BIT", Some("8"))
         .input("clk", 1)
         .input("rstn", 1)
@@ -15,5 +16,8 @@ fn test_dff() {
             Stmt::begin().assign("out", "0").end(),
             Stmt::begin().assign("out", "in0 + in1").end(),
         );
-    println!("{}", m.verilog().join("\n"));
+    let s = m.verilog().join("\n");
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push("tests/verilog/test_dff.sv");
+    fs::write(path, s).unwrap();
 }
