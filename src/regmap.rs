@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct RegMap {
-    name: String,
+    pub name: String,
     bit: usize,
     list: Vec<Entry>,
 

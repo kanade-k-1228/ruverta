@@ -4,7 +4,7 @@ use std::{fs, path::PathBuf};
 #[test]
 fn test_comb() {
     let name = "test_comb";
-    let m = Module::new("test_comb")
+    let m = Module::new(name)
         .input("clk", 1)
         .input("rstn", 1)
         .input("hoge", 1)
