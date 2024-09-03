@@ -154,15 +154,22 @@ impl Module {
                 .r#if(
                     &format!("{} && {}", regmap.wvalid, regmap.awvalid),
                     Stmt::begin()
-                        .case(alocated.iter().fold(
-                            Case::new(&regmap.awaddr),
-                            |case, (addr, _, entry)| {
-                                case.case(
-                                    &format!("{}", addr),
-                                    Stmt::assign(&entry.wname(), &regmap.wdata),
-                                )
-                            },
-                        ))
+                        .case(
+                            alocated
+                                .iter()
+                                .filter_map(|(addr, _, entry)| match entry.ty {
+                                    RegType::ReadWrite => {
+                                        Some((addr, Stmt::assign(&entry.wname(), &regmap.wdata)))
+                                    }
+                                    RegType::ReadOnly => None,
+                                    RegType::Trigger => {
+                                        Some((addr, Stmt::assign(&entry.wname(), &regmap.wdata)))
+                                    }
+                                })
+                                .fold(Case::new(&regmap.awaddr), |case, (addr, stmt)| {
+                                    case.case(&format!("{}", addr), stmt)
+                                }),
+                        )
                         .end(),
                 )
                 .end(),

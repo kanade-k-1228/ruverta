@@ -27,9 +27,7 @@ or
 ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
 ```
 
-SystemVerilogの
-
-## 基本の使い方
+## 使い方
 
 メソッドチェーンを用いてモジュールを作成します。
 
@@ -77,11 +75,38 @@ endmodule;
 
 </td></tr></table>
 
-APIの設計はわりと雑なので、リクエストあったらなんでもどうぞ～
+### モジュール
 
-## Advanced builder
+`Module::new()` でモジュールを作成します。
 
-| Func              | Rust                         | Verilog                                   |
+パラメタや入出力ポートを以下のメソッドで追加します。
+
+- `.param(name,default_value)`
+- `input(name, width)`
+- `output(name, width)`
+- `inout(name, width)`
+
+### always_comb
+
+`Stmt` で文を作成します。
+
+### always_ff
+
+`Sens::new()` でセンシティビティリストを作成し、監視するワイヤを以下のメソッドで追加します。
+
+- `.posedge(&str)`
+- `.negedge(&str)`
+- `.bothedge(&str)`
+
+### 出力
+
+`.verilog()` で出力できます。`Vec<String>` なので `.join("\n")` してください。
+
+> APIの設計はわりと雑なので、リクエストあったらなんでもどうぞ～
+
+## 拡張機能
+
+|                   | Rust                         | Verilog                                   |
 | ----------------- | ---------------------------- | ----------------------------------------- |
 | [DFF](#dff)       | [dff.rs](tests/dff.rs)       | [dff.sv](tests/verilog/test_dff.sv)       |
 | [Comb](#comb)     | [comb.rs](tests/comb.rs)     | [comb.sv](tests/verilog/test_comb.sv)     |
@@ -91,6 +116,21 @@ APIの設計はわりと雑なので、リクエストあったらなんでも�
 | [FIFO](#fifo)     | [fifo.rs](tests/fifo.rs)     | [fifo.sv](tests/verilog/test_fifo.sv)     |
 
 ### DFF
+
+順序回路は `always_ff` ではなく、`sync_ff` / `async_ff` を使うことを推奨します。
+
+DFF には何パターンかの使い方があります。
+
+- clock edge: posedge / negedge / bothedge
+- reset edge: positive / negative
+- reset timing: sync / async
+  
+いまのところ、次のパターンのみに対応しています。
+
+|            | clock edge | reset logic | reset timing |
+| ---------- | ---------- | ----------- | ------------ |
+| `sync_ff`  | posedge    | negative    | sync         |
+| `async_ff` | posedge    | negative    | async        |
 
 ```rust
 Module::new(name)
