@@ -93,14 +93,14 @@ endmodule;
 
 ### モジュール
 
-`Module::new()` でモジュールを作成します。
+`Module::new(name)` でモジュールを作成します。
 
 パラメタや入出力ポートを以下のメソッドで追加します。
 
-- `.param(name,default_value)`
-- `input(name, width)`
-- `output(name, width)`
-- `inout(name, width)`
+- `.param(name, default_value)`
+- `.input(name, width)`
+- `.output(name, width)`
+- `.inout(name, width)`
 
 ### always_comb
 
@@ -110,9 +110,9 @@ endmodule;
 
 `Sens::new()` でセンシティビティリストを作成し、監視するワイヤを以下のメソッドで追加します。
 
-- `.posedge(&str)`
-- `.negedge(&str)`
-- `.bothedge(&str)`
+- `.posedge(wire_name)`
+- `.negedge(wire_name)`
+- `.bothedge(wire_name)`
 
 ### 出力
 
@@ -133,9 +133,9 @@ endmodule;
 
 ### DFF
 
-順序回路は `always_ff` ではなく、`sync_ff` / `async_ff` を使うことを推奨します。
+順序回路を実装する場合 `always_ff` ではなく、`sync_ff` / `async_ff` を使うことを推奨します。
 
-DFF には何パターンかの使い方があります。
+DFF には、クロックとリセットの設定によって何パターンかの使い方があります。
 
 - clock edge: posedge / negedge / bothedge
 - reset edge: positive / negative
@@ -164,6 +164,10 @@ Module::new(name)
 ```
 
 ### Comb
+
+組合回路を実装する場合 `always_comb` ではなく、`comb` を使うことを推奨します。
+
+default を必ず要求するため、場合分けの漏れがありません。
 
 ```rust
 Module::new(name)
