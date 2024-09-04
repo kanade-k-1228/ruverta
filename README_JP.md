@@ -1,6 +1,6 @@
 <div align="center">
 
-# ruverta
+# ruverta <!-- omit in toc -->
 
 **Rust で Verilog を書くための簡単なライブラリ**
 
@@ -8,11 +8,27 @@
 
 </div>
 
-SystemVerilogの簡単なサブセットのみをサポートしています。
+SystemVerilog の簡単なサブセットのみをサポートしています。
 
 - 変数：`logic`のみ使用可能です。`reg` と `wire` はありません。
 - 組合回路：`always_comb`のみ使用可能です。 `assign`はありません。
 - 順序回路：`always_ff`のみ使用可能です。`always`はありません。
+
+**目次**
+
+- [インストール](#インストール)
+- [モジュールビルダの使い方](#モジュールビルダの使い方)
+  - [モジュール](#モジュール)
+  - [always_comb](#always_comb)
+  - [always_ff](#always_ff)
+  - [出力](#出力)
+- [拡張機能](#拡張機能)
+  - [DFF](#dff)
+  - [Comb](#comb)
+  - [FSM](#fsm)
+  - [CSR](#csr)
+  - [Stream](#stream)
+  - [FIFO](#fifo)
 
 ## インストール
 
@@ -27,7 +43,7 @@ or
 ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
 ```
 
-## 使い方
+## モジュールビルダの使い方
 
 メソッドチェーンを用いてモジュールを作成します。
 
@@ -102,18 +118,18 @@ endmodule;
 
 `.verilog()` で出力できます。`Vec<String>` なので `.join("\n")` してください。
 
-> APIの設計はわりと雑なので、リクエストあったらなんでもどうぞ～
+> API の設計はわりと雑なので、リクエストあったらなんでもどうぞ～
 
 ## 拡張機能
 
-|                   | Rust                         | Verilog                                   |
-| ----------------- | ---------------------------- | ----------------------------------------- |
-| [DFF](#dff)       | [dff.rs](tests/dff.rs)       | [dff.sv](tests/verilog/test_dff.sv)       |
-| [Comb](#comb)     | [comb.rs](tests/comb.rs)     | [comb.sv](tests/verilog/test_comb.sv)     |
-| [FSM](#fsm)       | [fsm.rs](tests/fsm.rs)       | [fsm.sv](tests/verilog/test_fsm.sv)       |
-| [CSR](#csr)       | [regmap.rs](tests/regmap.rs) | [regmap.sv](tests/verilog/test_regmap.sv) |
-| [Stream](#stream) | [stream.rs](tests/stream.rs) | [stream.sv](tests/verilog/test_stream.sv) |
-| [FIFO](#fifo)     | [fifo.rs](tests/fifo.rs)     | [fifo.sv](tests/verilog/test_fifo.sv)     |
+|                   | Rust                         | Verilog                              | Test                                       |
+| ----------------- | ---------------------------- | ------------------------------------ | ------------------------------------------ |
+| [DFF](#dff)       | [dff.rs](tests/dff.rs)       | [dff.sv](tests/verilog/dff.sv)       |                                            |
+| [Comb](#comb)     | [comb.rs](tests/comb.rs)     | [comb.sv](tests/verilog/comb.sv)     |                                            |
+| [FSM](#fsm)       | [fsm.rs](tests/fsm.rs)       | [fsm.sv](tests/verilog/fsm.sv)       |                                            |
+| [CSR](#csr)       | [regmap.rs](tests/regmap.rs) | [regmap.sv](tests/verilog/regmap.sv) | [regmap_tb.sv](tests/verilog/regmap_tb.sv) |
+| [Stream](#stream) | [stream.rs](tests/stream.rs) | [stream.sv](tests/verilog/stream.sv) |                                            |
+| [FIFO](#fifo)     | [fifo.rs](tests/fifo.rs)     | [fifo.sv](tests/verilog/fifo.sv)     |                                            |
 
 ### DFF
 
@@ -124,7 +140,7 @@ DFF には何パターンかの使い方があります。
 - clock edge: posedge / negedge / bothedge
 - reset edge: positive / negative
 - reset timing: sync / async
-  
+
 いまのところ、次のパターンのみに対応しています。
 
 |            | clock edge | reset logic | reset timing |
@@ -182,7 +198,7 @@ Module::new(name)
             .state("fuga")
             .jump("hoge == 0", "init")
             .r#else("fuga"),
-    );    
+    );
 ```
 
 ### CSR
@@ -205,5 +221,3 @@ Module::new(name)
 ### Stream
 
 ### FIFO
-
-### And More ...!

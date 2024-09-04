@@ -4,10 +4,11 @@ use ruverta::{
 };
 use std::{fs, path::PathBuf};
 
+const NAME: &str = "mod";
+
 #[test]
 fn test_module() {
-    let name = "test_fsm";
-    let m = Module::new(name)
+    let m = Module::new(NAME)
         .param("BIT", Some("8"))
         .input("clk", 1)
         .input("rstn", 1)
@@ -21,6 +22,6 @@ fn test_module() {
         );
     let s = m.verilog().join("\n");
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push(format!("tests/verilog/{}.sv", name));
+    path.push(format!("tests/verilog/{}.sv", NAME));
     fs::write(path, s).unwrap();
 }

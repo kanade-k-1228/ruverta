@@ -1,1 +1,6 @@
-{}
+{
+    "editor.formatOnSave": true,
+    "[systemverilog]": {
+        "editor.defaultFormatter": "bmpenuelas.systemverilog-formatter-vscode"
+    }
+}

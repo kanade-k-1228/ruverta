@@ -1,10 +1,11 @@
 use ruverta::{comb::Comb, module::Module};
 use std::{fs, path::PathBuf};
 
+const NAME: &str = "comb";
+
 #[test]
 fn test_comb() {
-    let name = "test_comb";
-    let m = Module::new(name)
+    let m = Module::new(NAME)
         .input("clk", 1)
         .input("rstn", 1)
         .input("hoge", 1)
@@ -19,6 +20,6 @@ fn test_comb() {
         );
     let s = m.verilog().join("\n");
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push(format!("tests/verilog/{}.sv", name));
+    path.push(format!("tests/verilog/{}.sv", NAME));
     fs::write(path, s).unwrap();
 }

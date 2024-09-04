@@ -3,7 +3,7 @@
 module tb;
 
   initial begin
-    $dumpfile("wave.vcd");
+    $dumpfile("regmap.vcd");
     $dumpvars(0, dut);
     #50000;
     $finish;
@@ -12,8 +12,8 @@ module tb;
   // --------------------------------------------------------------------------
 
   // Clock and Reset
-  logic clk;
-  logic rstn;
+  logic        clk;
+  logic        rstn;
 
   // AXI-Lite Bus
   logic [31:0] cbus_awaddr;
@@ -26,7 +26,7 @@ module tb;
   logic        cbus_wvalid;
   logic        cbus_wready;
 
-  logic [1:0]  cbus_bresp;
+  logic [ 1:0] cbus_bresp;
   logic        cbus_bvalid;
   logic        cbus_bready;
 
@@ -34,15 +34,15 @@ module tb;
   logic [ 2:0] cbus_arprot;
   logic        cbus_arvalid;
   logic        cbus_arready;
-  
+
   logic [31:0] cbus_rdata;
-  logic [1:0]  cbus_rresp;
+  logic [ 1:0] cbus_rresp;
   logic        cbus_rvalid;
   logic        cbus_rready;
 
-// verilator lint_off WIDTHTRUNC
-  test_regmap dut (.*);
-// verilator lint_on WIDTHTRUNC
+  // verilator lint_off WIDTHTRUNC
+  regmap dut (.*);
+  // verilator lint_on WIDTHTRUNC
 
   // --------------------------------------------------------------------------
 
@@ -88,13 +88,13 @@ module tb;
       cbus_wstrb   = 4'b1111;
       cbus_wvalid  = 1;
       cbus_bready  = 1;
-      wait(cbus_awready);
-      wait(cbus_wready);
-      wait(cbus_bvalid);
+      wait (cbus_awready);
+      wait (cbus_wready);
+      wait (cbus_bvalid);
       cbus_awvalid = 0;
       cbus_wvalid  = 0;
-      wait(!cbus_bvalid);
-      cbus_bready  = 0;
+      wait (!cbus_bvalid);
+      cbus_bready = 0;
     end
   endtask
 
@@ -103,12 +103,12 @@ module tb;
       cbus_araddr  = addr;
       cbus_arvalid = 1;
       cbus_rready  = 1;
-      wait(cbus_arready);
-      wait(cbus_rvalid);
+      wait (cbus_arready);
+      wait (cbus_rvalid);
       cbus_arvalid = 0;
       data = cbus_rdata;
-      wait(!cbus_rvalid);
-      cbus_rready  = 0;
+      wait (!cbus_rvalid);
+      cbus_rready = 0;
     end
   endtask
 
@@ -122,7 +122,7 @@ module tb;
   end
 
   initial begin
-    clk = 0;
+    clk  = 0;
     rstn = 1;
     axil_init();
     reset_dut();

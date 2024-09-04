@@ -1,8 +1,10 @@
 use ruverta::{module::Module, regmap::RegMap, stmt::Stmt};
 
+const NAME: &str = "uart";
+
 #[test]
 fn test_uart() {
-    let uart = Module::new("uart")
+    let uart = Module::new(NAME)
         .inout("clk", 1)
         .input("rstn", 1)
         .output("tx", 1)
