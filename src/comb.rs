@@ -1,30 +1,32 @@
-use crate::module::Module;
+use std::default;
+
+use crate::{module::Module, stmt::Stmt};
 
 #[derive(Debug)]
 pub struct Comb {
     inputs: Vec<String>,
     outputs: Vec<String>,
-    cases: Vec<Case>,
-    default: Option<(String, String)>,
-}
-
-#[derive(Debug)]
-struct Case {
-    condition: String,
-    output0: String,
-    output1: String,
+    cases: Vec<(String, Vec<String>)>,
+    default: Vec<String>,
 }
 
 impl Comb {
-    pub fn new() -> Self {
-        Comb {
+    pub fn new() -> CombBuilder {
+        CombBuilder {
             inputs: Vec::new(),
             outputs: Vec::new(),
             cases: Vec::new(),
-            default: None,
         }
     }
+}
 
+pub struct CombBuilder {
+    inputs: Vec<String>,
+    outputs: Vec<String>,
+    cases: Vec<(String, Vec<String>)>,
+}
+
+impl CombBuilder {
     pub fn input(mut self, name: &str) -> Self {
         self.inputs.push(name.to_string());
         self
@@ -35,39 +37,59 @@ impl Comb {
         self
     }
 
-    pub fn case(mut self, condition: &str, output0: &str, output1: &str) -> Self {
-        self.cases.push(Case {
-            condition: condition.to_string(),
-            output0: output0.to_string(),
-            output1: output1.to_string(),
-        });
+    pub fn case(mut self, cond: &str, outs: Vec<String>) -> Self {
+        assert!(self.outputs.len() == outs.len());
+        self.cases.push((cond.to_string(), outs));
         self
     }
 
-    pub fn default(mut self, output0: &str, output1: &str) -> Self {
-        self.default = Some((output0.to_string(), output1.to_string()));
-        self
+    pub fn default(self, outs: Vec<String>) -> Comb {
+        assert!(self.outputs.len() == outs.len());
+        Comb {
+            inputs: self.inputs,
+            outputs: self.outputs,
+            cases: self.cases,
+            default: outs,
+        }
     }
+}
 
+// ----------------------------------------------------------------------------
+
+impl Comb {
     pub fn build(self) {
         println!("Inputs: {:?}", self.inputs);
         println!("Outputs: {:?}", self.outputs);
         println!("Cases:");
-        for case in self.cases {
-            println!(
-                "  if {} => out0 = {}, out1 = {}",
-                case.condition, case.output0, case.output1
-            );
+        for (cond, outs) in self.cases {
+            println!("  if {} => {:?}", cond, outs);
         }
-        if let Some((out0, out1)) = self.default {
-            println!("Default: out0 = {}, out1 = {}", out0, out1);
-        }
+        println!("Default: out0 = {:?}", self.default);
     }
 }
 
 impl Module {
     pub fn comb(mut self, comb: Comb) -> Self {
-        todo!();
+        self = self.always_comb({
+            let mut stmt = Stmt::begin();
+            for (cond, outs) in &comb.cases {
+                stmt = stmt.r#if(&cond, {
+                    let mut a = Stmt::begin();
+                    for (var, out) in outs.iter().zip(&comb.outputs) {
+                        a = a.assign(&out, var);
+                    }
+                    a.end()
+                });
+            }
+            stmt = stmt.r#else({
+                let mut a = Stmt::begin();
+                for (var, out) in comb.default.iter().zip(&comb.outputs) {
+                    a = a.assign(&out, var);
+                }
+                a.end()
+            });
+            stmt.end()
+        });
         self
     }
 }

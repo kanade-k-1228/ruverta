@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{module::Module, util::clog2};
+use crate::{module::Module, stmt::Stmt, util::clog2};
 
 // ----------------------------------------------------------------------------
 
@@ -43,11 +43,20 @@ impl FSM {
 }
 
 impl Module {
-    pub fn sync_fsm(mut self, fsm: FSM) -> Self {
+    pub fn sync_fsm(self, fsm: FSM) -> Self {
         let width = clog2(fsm.states.len()).unwrap_or(8);
-        self = self.logic(&fsm.state_var, width, 1);
-        self = Module::sync_ff(self, &fsm.clk, &fsm.rst, todo!(), todo!());
-        self
+        self.logic(&fsm.state_var, width, 1).sync_ff(
+            &fsm.clk,
+            &fsm.rst,
+            {
+                let mut init = Stmt::begin().end();
+                init
+            },
+            {
+                let mut trans = Stmt::begin().end();
+                trans
+            },
+        )
     }
 }
 

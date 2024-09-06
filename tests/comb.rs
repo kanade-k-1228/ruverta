@@ -8,15 +8,18 @@ fn test_comb() {
     let m = Module::new(NAME)
         .input("clk", 1)
         .input("rstn", 1)
-        .input("hoge", 1)
+        .input("in0", 1)
+        .input("in1", 1)
+        .output("out0", 1)
+        .output("out1", 1)
         .comb(
             Comb::new()
                 .input("in0")
                 .input("in1")
                 .output("out0")
                 .output("out1")
-                .case("in0==0", "out0=0", "out1=0")
-                .default("0", "1"),
+                .case("in0==0", vec![format!("0"), format!("1")])
+                .default(vec![format!("in0"), format!("in1")]),
         );
     let s = m.verilog().join("\n");
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
