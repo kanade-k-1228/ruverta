@@ -168,11 +168,9 @@ impl Case {
         let mut ret = Vec::<String>::new();
         ret.push(format!("case ({})", self.var));
         let a = self.case.iter().flat_map(|(cond, stmt)| {
-            if let Stmt::Assign(a) = stmt {
-                vec![format!("  {}: {}", cond, a.verilog(assign_op))]
-            } else {
-                todo!()
-            }
+            let mut ret = vec![format!("  {}:", cond)];
+            ret.extend(stmt.verilog(assign_op).iter().map(|s| format!("  {s}")));
+            ret
         });
         ret.extend(a);
         ret.push(format!("endcase"));

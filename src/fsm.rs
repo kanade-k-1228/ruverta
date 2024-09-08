@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{module::Module, stmt::Stmt, util::clog2};
+use crate::{
+    module::Module,
+    stmt::{Case, Stmt},
+    util::clog2,
+};
 
 // ----------------------------------------------------------------------------
 
@@ -9,7 +13,7 @@ pub struct FSM {
     state_var: String,
     clk: String,
     rst: String,
-    states: HashMap<String, State>,
+    states: Vec<(String, State)>,
 }
 
 #[derive(Debug)]
@@ -30,7 +34,7 @@ impl FSM {
             state_var: state_var.to_string(),
             clk: clk.to_string(),
             rst: rst.to_string(),
-            states: HashMap::new(),
+            states: Vec::new(),
         }
     }
     pub fn state(self, name: &str) -> StateBuilder {
@@ -41,26 +45,6 @@ impl FSM {
         }
     }
 }
-
-impl Module {
-    pub fn sync_fsm(self, fsm: FSM) -> Self {
-        let width = clog2(fsm.states.len()).unwrap_or(8);
-        self.logic(&fsm.state_var, width, 1).sync_ff(
-            &fsm.clk,
-            &fsm.rst,
-            {
-                let mut init = Stmt::begin().end();
-                init
-            },
-            {
-                let mut trans = Stmt::begin().end();
-                trans
-            },
-        )
-    }
-}
-
-// ----------------------------------------------------------------------------
 
 pub struct StateBuilder {
     fsm: FSM,
@@ -87,7 +71,42 @@ impl StateBuilder {
             trans: self.jumps,
             default: next.to_string(),
         };
-        self.fsm.states.insert(self.name.clone(), state);
+        self.fsm.states.push((self.name, state));
         self.fsm
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+impl Module {
+    pub fn sync_fsm(mut self, fsm: FSM) -> Self {
+        println!("{:#?}", &fsm);
+        let width = clog2(fsm.states.len()).unwrap_or(8);
+        self = self.logic(&fsm.state_var, width, 1);
+        for (i, (name, _)) in fsm.states.iter().enumerate() {
+            self = self.lparam(name, &format!("{i}"));
+        }
+        self = self.sync_ff(
+            &fsm.clk,
+            &fsm.rst,
+            Stmt::begin().assign(&fsm.state_var, &format!("0")).end(),
+            Stmt::begin()
+                .case({
+                    let mut cases = Case::new(&fsm.state_var).case("init", Stmt::begin().end());
+                    for (name, state) in fsm.states {
+                        cases = cases.case(&name, {
+                            let mut stmt = Stmt::begin();
+                            for trans in state.trans {
+                                stmt = stmt
+                                    .r#if(&trans.cond, Stmt::assign(&fsm.state_var, &trans.next));
+                            }
+                            stmt.end()
+                        })
+                    }
+                    cases
+                })
+                .end(),
+        );
+        self
     }
 }

@@ -1,13 +1,13 @@
 use ruverta::{
     module::{Module, Sens},
-    stmt::Stmt,
+    stmt::{Case, Stmt},
 };
 use std::{fs, path::PathBuf};
 
-const NAME: &str = "mod";
+const NAME: &str = "basic";
 
 #[test]
-fn test_module() {
+fn test_basic() {
     let m = Module::new(NAME)
         .param("BIT", Some("8"))
         .input("clk", 1)
@@ -19,6 +19,14 @@ fn test_module() {
         .always_ff(
             Sens::new().posedge("clk"),
             Stmt::begin().assign("a", "b").end(),
+        )
+        .always_comb(
+            Stmt::begin()
+                .case({
+                    let a = Case::new("hoge");
+                    a
+                })
+                .end(),
         );
     let s = m.verilog().join("\n");
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

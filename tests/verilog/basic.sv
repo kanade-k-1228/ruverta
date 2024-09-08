@@ -1,4 +1,4 @@
-module mod #(
+module basic #(
     parameter BIT = 8
 ) (
     input  logic       clk,
@@ -10,5 +10,10 @@ module mod #(
   always_comb out = in0 + in1;
   always_ff @(posedge clk) begin
     a <= b;
+  end
+  always_comb begin
+    case (hoge)
+      default: a <= b;
+    endcase
   end
 endmodule

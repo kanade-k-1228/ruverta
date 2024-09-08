@@ -38,6 +38,10 @@ impl Module {
         self.params.push(Param::new(name, default));
         self
     }
+    pub fn lparam(mut self, name: &str, val: &str) -> Self {
+        self.blocks.push(Block::LParam(LParam::new(name, val)));
+        self
+    }
     pub fn logic(mut self, name: &str, width: usize, len: usize) -> Self {
         self.blocks.push(Block::Logic(Logic::new(name, width, len)));
         self
@@ -198,6 +202,7 @@ impl Param {
 
 #[derive(Debug)]
 enum Block {
+    LParam(LParam),
     Logic(Logic),
     Instant(Instant),
     AlwaysFF(AlwaysFF),
@@ -207,11 +212,35 @@ enum Block {
 impl Block {
     fn verilog(&self) -> Vec<String> {
         match self {
+            Block::LParam(e) => e.verilog(),
             Block::Logic(e) => e.verilog(),
             Block::Instant(e) => e.verilog(),
             Block::AlwaysFF(e) => e.verilog(),
             Block::AlwaysComb(e) => e.verilog(),
         }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+#[derive(Debug)]
+struct LParam {
+    name: String,
+    val: String,
+}
+
+impl LParam {
+    fn new(name: &str, val: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            val: val.to_string(),
+        }
+    }
+}
+
+impl LParam {
+    fn verilog(&self) -> Vec<String> {
+        vec![format!("localparam {} = {};", self.name, self.val)]
     }
 }
 
