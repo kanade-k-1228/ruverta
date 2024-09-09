@@ -72,19 +72,19 @@ impl Module {
             let mut stmt = Stmt::begin();
             for (cond, outs) in &comb.cases {
                 stmt = stmt.r#if(&cond, {
-                    let mut a = Stmt::begin();
+                    let mut stmt = Stmt::begin();
                     for (var, out) in outs.iter().zip(&comb.outputs) {
-                        a = a.assign(&out, var);
+                        stmt = stmt.assign(&out, var);
                     }
-                    a.end()
+                    stmt.end()
                 });
             }
             stmt = stmt.r#else({
-                let mut a = Stmt::begin();
+                let mut stmt = Stmt::begin();
                 for (var, out) in comb.default.iter().zip(&comb.outputs) {
-                    a = a.assign(&out, var);
+                    stmt = stmt.assign(&out, var);
                 }
-                a.end()
+                stmt.end()
             });
             stmt.end()
         });

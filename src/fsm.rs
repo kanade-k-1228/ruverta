@@ -17,7 +17,7 @@ pub struct FSM {
 #[derive(Debug)]
 struct State {
     trans: Vec<Trans>,
-    _default: String,
+    default: String,
 }
 
 #[derive(Debug)]
@@ -67,7 +67,7 @@ impl StateBuilder {
     pub fn r#else(mut self, next: &str) -> FSM {
         let state = State {
             trans: self.jumps,
-            _default: next.to_string(),
+            default: next.to_string(),
         };
         self.fsm.states.push((self.name, state));
         self.fsm
@@ -87,10 +87,10 @@ impl Module {
         self = self.sync_ff(
             &fsm.clk,
             &fsm.rst,
-            Stmt::begin().assign(&fsm.state_var, &format!("0")).end(),
+            Stmt::assign(&fsm.state_var, &format!("0")),
             Stmt::begin()
                 .case({
-                    let mut cases = Case::new(&fsm.state_var).case("init", Stmt::empty());
+                    let mut cases = Case::new(&fsm.state_var);
                     for (name, state) in fsm.states {
                         cases = cases.case(&name, {
                             let mut stmt = Stmt::begin();
@@ -99,9 +99,9 @@ impl Module {
                                     .r#if(&trans.cond, Stmt::assign(&fsm.state_var, &trans.next));
                             }
                             stmt.end()
-                        })
+                        });
                     }
-                    cases.default(Stmt::empty())
+                    cases
                 })
                 .end(),
         );

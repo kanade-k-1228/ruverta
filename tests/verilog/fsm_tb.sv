@@ -3,7 +3,7 @@
 module tb;
 
   initial begin
-    $dumpfile("dff.vcd");
+    $dumpfile("fsm.vcd");
     $dumpvars(0, dut);
     #50000;
     $finish;
@@ -29,7 +29,7 @@ module tb;
   // --------------------------------------------------------------------------
 
   // verilator lint_off WIDTHTRUNC
-  dff dut (.*);
+  fsm dut (.*);
   // verilator lint_on WIDTHTRUNC
 
   // --------------------------------------------------------------------------

@@ -1,25 +1,23 @@
 module fsm #(
 ) (
     input logic clk,
-    input logic rstn
+    input logic rstn,
+    input logic in0,
+    input logic in1
 );
   logic state;
-  localparam init = 0;
-  localparam fuga = 1;
+  localparam INIT = 0;
+  localparam RUNNING = 1;
   always_ff @(posedge clk) begin
-    if (!rstn) begin
-      state <= 0;
-    end else begin
+    if (!rstn) state <= 0;
+    else begin
       case (state)
-        init: begin
+        INIT: begin
+          if (in0 == 1) state <= RUNNING;
         end
-        init: begin
-          if (hoge == 1) state <= fuga;
+        RUNNING: begin
+          if (in1 == 1) state <= INIT;
         end
-        fuga: begin
-          if (hoge == 0) state <= init;
-        end
-        default: ;
       endcase
     end
   end

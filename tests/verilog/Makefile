@@ -13,7 +13,7 @@ else ($(EMU),verilator)
 endif
 
 %: %.vcd
-	@if [ -f $@$(GTKW_EXT) ]; then \
+	@if [ -f $@.gtkw ]; then \
 		$(TOOL)/gtkwave $@.gtkw; \
 	else \
 		$(TOOL)/gtkwave $@.vcd; \
