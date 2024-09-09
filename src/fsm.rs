@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     module::Module,
     stmt::{Case, Stmt},
@@ -19,7 +17,7 @@ pub struct FSM {
 #[derive(Debug)]
 struct State {
     trans: Vec<Trans>,
-    default: String,
+    _default: String,
 }
 
 #[derive(Debug)]
@@ -69,7 +67,7 @@ impl StateBuilder {
     pub fn r#else(mut self, next: &str) -> FSM {
         let state = State {
             trans: self.jumps,
-            default: next.to_string(),
+            _default: next.to_string(),
         };
         self.fsm.states.push((self.name, state));
         self.fsm
@@ -103,7 +101,7 @@ impl Module {
                             stmt.end()
                         })
                     }
-                    cases
+                    cases.default(Stmt::empty())
                 })
                 .end(),
         );

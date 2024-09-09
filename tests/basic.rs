@@ -15,17 +15,16 @@ fn test_basic() {
         .input("in0", 8)
         .input("in1", 8)
         .output("out", 8)
-        .always_comb(Stmt::assign("out", "in0 + in1"))
-        .always_ff(
-            Sens::new().posedge("clk"),
-            Stmt::begin().assign("a", "b").end(),
-        )
+        .logic("tmp", 8, 1)
+        .always_comb(Stmt::assign("tmp", "in0 + in1"))
+        .always_ff(Sens::new().posedge("clk"), Stmt::assign("out", "tmp"))
         .always_comb(
             Stmt::begin()
-                .case({
-                    let a = Case::new("hoge");
-                    a
-                })
+                .case(
+                    Case::new("hoge")
+                        .case("0", Stmt::empty())
+                        .case("1", Stmt::empty()),
+                )
                 .end(),
         );
     let s = m.verilog().join("\n");

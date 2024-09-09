@@ -168,7 +168,8 @@ impl Module {
                                 })
                                 .fold(Case::new(&regmap.awaddr), |case, (addr, stmt)| {
                                     case.case(&format!("{}", addr), stmt)
-                                }),
+                                })
+                                .default(Stmt::begin().end()),
                         )
                         .end(),
                 )
@@ -185,7 +186,7 @@ impl Module {
                     &regmap.arvalid,
                     Stmt::begin()
                         .case({
-                            let cases = alocated.iter().fold(
+                            alocated.iter().fold(
                                 Case::new(&regmap.araddr),
                                 |case, (addr, _, entry)| {
                                     case.case(
@@ -193,8 +194,7 @@ impl Module {
                                         Stmt::assign(&regmap.rdata, &entry.rname()),
                                     )
                                 },
-                            );
-                            cases
+                            )
                         })
                         .end(),
                 )

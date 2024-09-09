@@ -7,13 +7,15 @@ module basic #(
     input  logic [7:0] in1,
     output logic [7:0] out
 );
-  always_comb out = in0 + in1;
-  always_ff @(posedge clk) begin
-    a <= b;
-  end
+  logic [7:0] tmp;
+  always_comb tmp = in0 + in1;
+  always_ff @(posedge clk) out <= tmp;
   always_comb begin
     case (hoge)
-      default: a <= b;
+      0: begin
+      end
+      1: begin
+      end
     endcase
   end
 endmodule

@@ -1,5 +1,3 @@
-use std::default;
-
 use crate::{module::Module, stmt::Stmt};
 
 #[derive(Debug)]

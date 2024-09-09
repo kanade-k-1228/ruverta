@@ -165,14 +165,23 @@ impl Case {
 
 impl Case {
     fn verilog(&self, assign_op: &str) -> Vec<String> {
+        if self.case.len() == 0 && self.default.is_none() {
+            println!("Case stmt must have case!");
+            return vec![];
+        }
         let mut ret = Vec::<String>::new();
         ret.push(format!("case ({})", self.var));
-        let a = self.case.iter().flat_map(|(cond, stmt)| {
-            let mut ret = vec![format!("  {}:", cond)];
+
+        for (cond, stmt) in &self.case {
+            ret.push(format!("  {}: ", cond));
             ret.extend(stmt.verilog(assign_op).iter().map(|s| format!("  {s}")));
-            ret
-        });
-        ret.extend(a);
+        }
+
+        if let Some(stmt) = &self.default {
+            ret.push(format!("  default: "));
+            ret.extend(stmt.verilog(assign_op).iter().map(|s| format!("  {s}")));
+        }
+
         ret.push(format!("endcase"));
         ret
     }
