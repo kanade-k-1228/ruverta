@@ -2,6 +2,7 @@
 
 #[derive(Debug)]
 pub enum Stmt {
+    Empty,
     Block(Block),
     Assign(Assign),
     Case(Case),
@@ -12,7 +13,7 @@ pub enum Stmt {
 
 impl Stmt {
     pub fn empty() -> Self {
-        Self::Block(Block { body: vec![] })
+        Self::Empty
     }
     pub fn begin() -> Block {
         Block::begin()
@@ -32,6 +33,7 @@ impl Stmt {
 
     fn verilog(&self, assign_op: &str) -> Vec<String> {
         match self {
+            Stmt::Empty => vec![format!(";")],
             Stmt::Block(block) => block.verilog(assign_op),
             Stmt::Assign(assign) => vec![assign.verilog(assign_op)],
             Stmt::Case(case) => case.verilog(assign_op),

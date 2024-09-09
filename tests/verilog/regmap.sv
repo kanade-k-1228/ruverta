@@ -1,4 +1,5 @@
-module regmap (
+module regmap #(
+) (
     input  logic        clk,
     input  logic        rstn,
     input  logic [ 1:0] cbus_awaddr,
@@ -36,6 +37,7 @@ module regmap (
           0: csr_rw0 <= cbus_wdata;
           1: csr_rw1 <= cbus_wdata;
           3: csr_tw_trig <= cbus_wdata;
+          default: ;
         endcase
       end
     end

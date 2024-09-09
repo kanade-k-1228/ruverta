@@ -169,7 +169,7 @@ impl Module {
                                 .fold(Case::new(&regmap.awaddr), |case, (addr, stmt)| {
                                     case.case(&format!("{}", addr), stmt)
                                 })
-                                .default(Stmt::begin().end()),
+                                .default(Stmt::empty()),
                         )
                         .end(),
                 )

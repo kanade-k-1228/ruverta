@@ -90,7 +90,7 @@ impl Module {
             Stmt::begin().assign(&fsm.state_var, &format!("0")).end(),
             Stmt::begin()
                 .case({
-                    let mut cases = Case::new(&fsm.state_var).case("init", Stmt::begin().end());
+                    let mut cases = Case::new(&fsm.state_var).case("init", Stmt::empty());
                     for (name, state) in fsm.states {
                         cases = cases.case(&name, {
                             let mut stmt = Stmt::begin();

@@ -12,10 +12,8 @@ module basic #(
   always_ff @(posedge clk) out <= tmp;
   always_comb begin
     case (hoge)
-      0: begin
-      end
-      1: begin
-      end
+      0: ;
+      1: ;
     endcase
   end
 endmodule

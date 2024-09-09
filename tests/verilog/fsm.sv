@@ -19,6 +19,7 @@ module fsm #(
         fuga: begin
           if (hoge == 0) state <= init;
         end
+        default: ;
       endcase
     end
   end
