@@ -65,27 +65,38 @@ impl Module {
     pub fn verilog(&self) -> Vec<String> {
         let mut code: Vec<String> = Vec::new();
 
-        code.push(format!("module {} #(", self.name));
+        // Module def
+        {
+            code.push(format!("module {}", self.name));
 
-        for (i, param) in self.params.iter().enumerate() {
-            if i < self.params.len() - 1 {
-                code.push(format!("  {},", param.verilog()));
-            } else {
-                code.push(format!("  {}", param.verilog()));
+            // Params
+            if self.params.len() > 0 {
+                code.push(format!("#("));
+                for (i, param) in self.params.iter().enumerate() {
+                    if i < self.params.len() - 1 {
+                        code.push(format!("  {},", param.verilog()));
+                    } else {
+                        code.push(format!("  {}", param.verilog()));
+                    }
+                }
+                code.push(format!(")"));
             }
-        }
 
-        code.push(format!(") ("));
-
-        for (i, port) in self.ports.iter().enumerate() {
-            if i < self.ports.len() - 1 {
-                code.push(format!("  {},", port.verilog()));
-            } else {
-                code.push(format!("  {}", port.verilog()));
+            // Ports
+            if self.ports.len() > 0 {
+                code.push(format!("("));
+                for (i, port) in self.ports.iter().enumerate() {
+                    if i < self.ports.len() - 1 {
+                        code.push(format!("  {},", port.verilog()));
+                    } else {
+                        code.push(format!("  {}", port.verilog()));
+                    }
+                }
+                code.push(format!(")"));
             }
-        }
 
-        code.push(format!(");"));
+            code.push(format!(";"));
+        }
 
         for stmt in &self.blocks {
             for line in stmt.verilog() {

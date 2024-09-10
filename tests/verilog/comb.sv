@@ -1,5 +1,4 @@
-module comb #(
-) (
+module comb (
     input  logic clk,
     input  logic rstn,
     input  logic in0,

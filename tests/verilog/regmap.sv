@@ -1,5 +1,4 @@
-module regmap #(
-) (
+module regmap (
     input  logic        clk,
     input  logic        rstn,
     input  logic [ 1:0] cbus_awaddr,

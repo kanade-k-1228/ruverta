@@ -11,11 +11,12 @@ pub struct FSM {
     state_var: String,
     clk: String,
     rst: String,
-    states: Vec<(String, State)>,
+    states: Vec<State>,
 }
 
 #[derive(Debug)]
 struct State {
+    name: String,
     trans: Vec<Trans>,
     default: String,
 }
@@ -35,6 +36,7 @@ impl FSM {
             states: Vec::new(),
         }
     }
+
     pub fn state(self, name: &str) -> StateBuilder {
         StateBuilder {
             fsm: self,
@@ -66,10 +68,11 @@ impl StateBuilder {
 
     pub fn r#else(mut self, next: &str) -> FSM {
         let state = State {
+            name: self.name,
             trans: self.jumps,
             default: next.to_string(),
         };
-        self.fsm.states.push((self.name, state));
+        self.fsm.states.push(state);
         self.fsm
     }
 }
@@ -81,8 +84,8 @@ impl Module {
         println!("{:#?}", &fsm);
         let width = clog2(fsm.states.len()).unwrap_or(8);
         self = self.logic(&fsm.state_var, width, 1);
-        for (i, (name, _)) in fsm.states.iter().enumerate() {
-            self = self.lparam(name, &format!("{i}"));
+        for (i, state) in fsm.states.iter().enumerate() {
+            self = self.lparam(&state.name, &format!("{i}"));
         }
         self = self.sync_ff(
             &fsm.clk,
@@ -91,8 +94,8 @@ impl Module {
             Stmt::begin()
                 .case({
                     let mut cases = Case::new(&fsm.state_var);
-                    for (name, state) in fsm.states {
-                        cases = cases.case(&name, {
+                    for state in fsm.states {
+                        cases = cases.case(&state.name, {
                             let mut stmt = Stmt::begin();
                             for trans in state.trans {
                                 stmt = stmt

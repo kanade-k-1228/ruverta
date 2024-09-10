@@ -1,5 +1,4 @@
-module fsm #(
-) (
+module fsm (
     input logic clk,
     input logic rstn,
     input logic in0,
