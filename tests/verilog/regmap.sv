@@ -21,20 +21,19 @@ module regmap (
 );
   logic [7:0] csr_rw      [1:0];
   logic [7:0] csr_ro;
-  logic       csr_tw_resp;
   logic       csr_tw_trig;
+  logic       csr_tw_resp;
   always_ff @(posedge clk) begin
     if (!rstn) begin
-      csr_rw[0] <= 0;
-      csr_rw[1] <= 0;
-      csr_ro <= 0;
+      csr_rw[0]   <= 0;
+      csr_rw[1]   <= 0;
       csr_tw_trig <= 0;
     end else begin
       if (cbus_wvalid && cbus_awvalid) begin
         case (cbus_awaddr)
-          0: csr_rw[0] <= cbus_wdata;
-          1: csr_rw[1] <= cbus_wdata;
-          3: csr_tw_trig <= cbus_wdata;
+          0: csr_rw[0] <= cbus_wdata[7:0];
+          1: csr_rw[1] <= cbus_wdata[7:0];
+          3: csr_tw_trig <= cbus_wdata[0:0];
           default: ;
         endcase
       end
@@ -45,10 +44,10 @@ module regmap (
     else begin
       if (cbus_arvalid) begin
         case (cbus_araddr)
-          0: csr_rw[0] <= cbus_wdata;
-          1: csr_rw[1] <= cbus_wdata;
-          2: csr_ro <= cbus_wdata;
-          3: csr_tw_trig <= cbus_wdata;
+          0: cbus_rdata[7:0] <= csr_rw[0];
+          1: cbus_rdata[7:0] <= csr_rw[1];
+          2: cbus_rdata[7:0] <= csr_ro;
+          3: cbus_rdata[0:0] <= csr_tw_resp;
           default: cbus_rdata <= 0;
         endcase
       end

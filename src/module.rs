@@ -43,8 +43,8 @@ impl Module {
             .push(Block::LocalParam(LocalParam::new(name, val)));
         self
     }
-    pub fn logic(mut self, name: &str, width: usize, len: usize) -> Self {
-        self.blocks.push(Block::Logic(Logic::new(name, width, len)));
+    pub fn logic(mut self, name: &str, bit: usize, len: usize) -> Self {
+        self.blocks.push(Block::Logic(Logic::new(name, bit, len)));
         self
     }
     pub fn instant(mut self, inst: Instant) -> Self {
@@ -158,7 +158,7 @@ impl Port {
         let len = if self.len == 1 {
             format!("")
         } else {
-            format!("[{:>2}:0]", self.bit - 1)
+            format!("[{:>2}:0]", self.len - 1)
         };
         format!(
             "{:<6} logic {}{}{}",

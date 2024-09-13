@@ -1,7 +1,7 @@
 use crate::{
     module::Module,
     stmt::{Case, Stmt},
-    util::clog2,
+    util::{clog2, range, sel},
 };
 
 // ----------------------------------------------------------------------------
@@ -69,20 +69,18 @@ impl RegMap {
 
     pub fn read_write(mut self, name: &str, bit: usize, len: usize) -> Self {
         assert!(bit <= self.bit);
-        self.list
-            .push(Entry::new(RegType::ReadWrite, name, bit, len));
+        self.list.push(Entry::read_write(name, bit, len));
         self
     }
 
     pub fn read_only(mut self, name: &str, bit: usize, len: usize) -> Self {
         assert!(bit <= self.bit);
-        self.list
-            .push(Entry::new(RegType::ReadOnly, name, bit, len));
+        self.list.push(Entry::read_only(name, bit, len));
         self
     }
 
     pub fn trigger(mut self, name: &str) -> Self {
-        self.list.push(Entry::new(RegType::Trigger, name, 1, 1));
+        self.list.push(Entry::trigger(name));
         self
     }
 }
@@ -90,20 +88,18 @@ impl RegMap {
 impl Module {
     pub fn regmap(mut self, clk: &str, rst: &str, regmap: RegMap) -> Self {
         // Allocate Registors
-        let alocated = regmap
-            .list
-            .iter()
-            .scan(0_usize, |addr, entry| {
-                let begin = *addr;
-                let end = begin + entry.len - 1;
-                *addr = *addr + entry.len;
-                Some((begin, end, entry))
-            })
-            .collect::<Vec<_>>();
-        let addr_width = {
-            let regcnt = alocated.last().map(|(_, last, _)| *last).unwrap_or(64);
-            clog2(regcnt).unwrap_or(6)
+        let (aloc, size) = {
+            let mut addr = 0;
+            let mut aloc = vec![];
+            for entry in &regmap.list {
+                for idx in 0..entry.len() {
+                    aloc.push(entry.allocate(addr, idx));
+                    addr += 1;
+                }
+            }
+            (aloc, addr)
         };
+        let addr_width = clog2(size).unwrap_or(1);
 
         // IO Port
         self = self
@@ -126,61 +122,35 @@ impl Module {
             .input(&regmap.rready, 1);
 
         // Regs
-        for (_, _, entry) in &alocated {
-            self = match entry.ty {
-                RegType::ReadWrite => self.logic(&entry.name, entry.bit, entry.len),
-                RegType::ReadOnly => self.logic(&entry.name, entry.bit, entry.len),
-                RegType::Trigger => self.logic(&entry.rname(), entry.bit, entry.len).logic(
-                    &entry.wname(),
-                    entry.bit,
-                    entry.len,
-                ),
+        for entry in &regmap.list {
+            self = match entry {
+                Entry::ReadWrite { name, bit, len } => self.logic(name, *bit, *len),
+                Entry::ReadOnly { name, bit, len } => self.logic(name, *bit, *len),
+                Entry::Trigger { name } => {
+                    self.logic(&format!("{name}_trig"), 1, 1)
+                        .logic(&format!("{name}_resp"), 1, 1)
+                }
             };
         }
 
         // Write Logic
         let init = {
             let mut stmt = Stmt::begin();
-            for (_, _, entry) in &alocated {
-                if entry.len == 1 {
-                    stmt = stmt.assign(&entry.wname(), "0");
-                } else {
-                    for i in 0..entry.len {
-                        stmt = stmt.assign(&format!("{}[{}]", entry.wname(), i), "0");
-                    }
+            for entry in &aloc {
+                if let Some(name) = &entry.write {
+                    stmt = stmt.assign(&name, "0");
                 }
             }
             stmt.end()
         };
         let case = {
             let mut cases = Case::new(&regmap.awaddr);
-            for (begin, end, entry) in &alocated {
-                match entry.ty {
-                    RegType::ReadWrite => {
-                        if entry.len == 1 {
-                            cases = cases.case(
-                                &format!("{}", begin),
-                                Stmt::assign(&entry.wname(), &regmap.wdata),
-                            );
-                        } else {
-                            for addr in *begin..(*end + 1) {
-                                cases = cases.case(
-                                    &format!("{}", addr),
-                                    Stmt::assign(
-                                        &format!("{}[{}]", entry.wname(), addr),
-                                        &regmap.wdata,
-                                    ),
-                                );
-                            }
-                        }
-                    }
-                    RegType::ReadOnly => {}
-                    RegType::Trigger => {
-                        cases = cases.case(
-                            &format!("{}", begin),
-                            Stmt::assign(&entry.wname(), &regmap.wdata),
-                        )
-                    }
+            for entry in &aloc {
+                if let Some(name) = &entry.write {
+                    cases = cases.case(
+                        &format!("{}", entry.addr),
+                        Stmt::assign(&name, &format!("{}{}", regmap.wdata, range(entry.bit, 0))),
+                    );
                 }
             }
             cases.default(Stmt::empty())
@@ -200,19 +170,12 @@ impl Module {
         // Read Logic
         let case = {
             let mut cases = Case::new(&regmap.araddr);
-            for (begin, end, entry) in &alocated {
-                if entry.len == 1 {
+            for entry in &aloc {
+                if let Some(name) = &entry.read {
                     cases = cases.case(
-                        &format!("{}", begin),
-                        Stmt::assign(&entry.wname(), &regmap.wdata),
+                        &format!("{}", entry.addr),
+                        Stmt::assign(&format!("{}{}", regmap.rdata, range(entry.bit, 0)), &name),
                     );
-                } else {
-                    for addr in *begin..(*end + 1) {
-                        cases = cases.case(
-                            &format!("{}", addr),
-                            Stmt::assign(&format!("{}[{}]", entry.wname(), addr), &regmap.wdata),
-                        );
-                    }
                 }
             }
             cases.default(Stmt::assign(&regmap.rdata, "0"))
@@ -277,61 +240,99 @@ impl Module {
         self
     }
 
-    pub fn regio(mut self, config: &RegMap) -> Self {
-        for reg in &config.list {
-            self = match reg.ty {
-                RegType::ReadWrite => self.output(&reg.name, reg.bit),
-                RegType::ReadOnly => self.input(&reg.name, reg.bit),
-                RegType::Trigger => self
-                    .output(&format!("{}_trig", reg.name), reg.bit)
-                    .input(&format!("{}_resp", reg.name), reg.bit),
-            };
-        }
-        self
-    }
+    // pub fn regio(mut self, config: &RegMap) -> Self {
+    //     for reg in &config.list {
+    //         self = match reg.ty {
+    //             RegType::ReadWrite => self.output(&reg.name, reg.bit),
+    //             RegType::ReadOnly => self.input(&reg.name, reg.bit),
+    //             RegType::Trigger => self
+    //                 .output(&format!("{}_trig", reg.name), reg.bit)
+    //                 .input(&format!("{}_resp", reg.name), reg.bit),
+    //         };
+    //     }
+    //     self
+    // }
 }
 
 // ----------------------------------------------------------------------------
 
 #[derive(Debug)]
-struct Entry {
-    ty: RegType,
-    name: String,
-    bit: usize,
-    len: usize,
-}
-
-#[derive(Debug)]
-enum RegType {
-    ReadWrite,
-    ReadOnly,
-    Trigger,
+enum Entry {
+    ReadWrite {
+        name: String,
+        bit: usize,
+        len: usize,
+    },
+    ReadOnly {
+        name: String,
+        bit: usize,
+        len: usize,
+    },
+    Trigger {
+        name: String,
+    },
 }
 
 impl Entry {
-    fn new(ty: RegType, name: &str, bit: usize, len: usize) -> Self {
+    fn read_only(name: &str, bit: usize, len: usize) -> Self {
         assert!(0 < bit);
         assert!(0 < len);
-        Self {
-            ty,
+        Self::ReadOnly {
             name: name.to_string(),
             bit,
             len,
         }
     }
+    fn read_write(name: &str, bit: usize, len: usize) -> Self {
+        assert!(0 < bit);
+        assert!(0 < len);
+        Self::ReadWrite {
+            name: name.to_string(),
+            bit,
+            len,
+        }
+    }
+    fn trigger(name: &str) -> Self {
+        Self::Trigger {
+            name: name.to_string(),
+        }
+    }
 
-    fn wname(&self) -> String {
-        match self.ty {
-            RegType::ReadWrite => self.name.clone(),
-            RegType::ReadOnly => self.name.clone(),
-            RegType::Trigger => format!("{}_trig", self.name),
+    fn allocate(&self, addr: usize, idx: usize) -> Allocated {
+        match self {
+            Self::ReadWrite { name, bit, len } => Allocated {
+                read: Some(format!("{}{}", name, sel(idx, *len))),
+                write: Some(format!("{}{}", name, sel(idx, *len))),
+                bit: *bit,
+                addr,
+            },
+            Self::ReadOnly { name, bit, len } => Allocated {
+                read: Some(format!("{}{}", name, sel(idx, *len))),
+                write: None,
+                bit: *bit,
+                addr,
+            },
+            Self::Trigger { name } => Allocated {
+                read: Some(format!("{}_resp", name)),
+                write: Some(format!("{}_trig", name)),
+                bit: 1,
+                addr,
+            },
         }
     }
-    fn rname(&self) -> String {
-        match self.ty {
-            RegType::ReadWrite => self.name.clone(),
-            RegType::ReadOnly => self.name.clone(),
-            RegType::Trigger => format!("{}_resp", self.name),
+    fn len(&self) -> usize {
+        match self {
+            Self::ReadWrite { len, .. } => *len,
+            Self::ReadOnly { len, .. } => *len,
+            Self::Trigger { .. } => 1,
         }
     }
+}
+
+#[derive(Debug)]
+struct Allocated {
+    read: Option<String>,
+    write: Option<String>,
+    addr: usize,
+    bit: usize,
 }
