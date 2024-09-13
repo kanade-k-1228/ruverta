@@ -39,7 +39,8 @@ impl Module {
         self
     }
     pub fn lparam(mut self, name: &str, val: &str) -> Self {
-        self.blocks.push(Block::LParam(LParam::new(name, val)));
+        self.blocks
+            .push(Block::LocalParam(LocalParam::new(name, val)));
         self
     }
     pub fn logic(mut self, name: &str, width: usize, len: usize) -> Self {
@@ -116,55 +117,55 @@ impl Module {
 struct Port {
     name: String,
     direct: Direct,
-    width: usize,
-    length: usize,
+    bit: usize,
+    len: usize,
 }
 
 impl Port {
-    fn input(name: &str, width: usize, length: usize) -> Self {
+    fn input(name: &str, bit: usize, len: usize) -> Self {
         Self {
             name: name.to_string(),
             direct: Direct::In,
-            width,
-            length,
+            bit,
+            len,
         }
     }
-    fn output(name: &str, width: usize, length: usize) -> Self {
+    fn output(name: &str, bit: usize, len: usize) -> Self {
         Self {
             name: name.to_string(),
             direct: Direct::Out,
-            width,
-            length,
+            bit,
+            len,
         }
     }
-    fn inout(name: &str, width: usize, length: usize) -> Self {
+    fn inout(name: &str, bit: usize, len: usize) -> Self {
         Self {
             name: name.to_string(),
             direct: Direct::InOut,
-            width,
-            length,
+            bit,
+            len,
         }
     }
 }
 
 impl Port {
     fn verilog(&self) -> String {
-        let width_str = if self.width == 1 {
+        let bit = if self.bit == 1 {
             format!("       ")
         } else {
-            format!("[{:>2}:0] ", self.width - 1)
+            format!("[{:>2}:0] ", self.bit - 1)
         };
-        let length_str = if self.length == 1 {
+        let len = if self.len == 1 {
             format!("")
         } else {
-            format!("[{:>2}:0]", self.width - 1)
+            format!("[{:>2}:0]", self.bit - 1)
         };
         format!(
             "{:<6} logic {}{}{}",
             self.direct.verilog(),
-            width_str,
+            bit,
             self.name,
-            length_str
+            len
         )
     }
 }
@@ -213,7 +214,7 @@ impl Param {
 
 #[derive(Debug)]
 enum Block {
-    LParam(LParam),
+    LocalParam(LocalParam),
     Logic(Logic),
     Instant(Instant),
     AlwaysFF(AlwaysFF),
@@ -223,7 +224,7 @@ enum Block {
 impl Block {
     fn verilog(&self) -> Vec<String> {
         match self {
-            Block::LParam(e) => e.verilog(),
+            Block::LocalParam(e) => e.verilog(),
             Block::Logic(e) => e.verilog(),
             Block::Instant(e) => e.verilog(),
             Block::AlwaysFF(e) => e.verilog(),
@@ -235,12 +236,12 @@ impl Block {
 // ----------------------------------------------------------------------------
 
 #[derive(Debug)]
-struct LParam {
+struct LocalParam {
     name: String,
     val: String,
 }
 
-impl LParam {
+impl LocalParam {
     fn new(name: &str, val: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -249,7 +250,7 @@ impl LParam {
     }
 }
 
-impl LParam {
+impl LocalParam {
     fn verilog(&self) -> Vec<String> {
         vec![format!("localparam {} = {};", self.name, self.val)]
     }
@@ -260,33 +261,33 @@ impl LParam {
 #[derive(Debug)]
 struct Logic {
     name: String,
-    width: usize,
-    length: usize,
+    bit: usize,
+    len: usize,
 }
 
 impl Logic {
-    fn new(name: &str, width: usize, len: usize) -> Self {
+    fn new(name: &str, bit: usize, len: usize) -> Self {
         Self {
             name: name.to_string(),
-            width: width,
-            length: len,
+            bit,
+            len,
         }
     }
 }
 
 impl Logic {
     fn verilog(&self) -> Vec<String> {
-        let width_str = if self.width == 1 {
+        let bit = if self.bit == 1 {
             format!("       ")
         } else {
-            format!("[{:>2}:0] ", self.width - 1)
+            format!("[{:>2}:0] ", self.bit - 1)
         };
-        let length_str = if self.length == 1 {
+        let len = if self.len == 1 {
             format!("")
         } else {
-            format!("[{:>2}:0]", self.width - 1)
+            format!("[{:>2}:0]", self.len - 1)
         };
-        vec![format!("logic {}{}{};", width_str, self.name, length_str)]
+        vec![format!("logic {}{}{};", bit, self.name, len)]
     }
 }
 

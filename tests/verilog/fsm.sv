@@ -13,9 +13,11 @@ module fsm (
       case (state)
         INIT: begin
           if (in0 == 1) state <= RUNNING;
+          else state <= INIT;
         end
         RUNNING: begin
           if (in1 == 1) state <= INIT;
+          else state <= RUNNING;
         end
       endcase
     end

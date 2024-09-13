@@ -9,8 +9,7 @@ fn test_regmap() {
         "clk",
         "rstn",
         RegMap::new("cbus", 32)
-            .read_write("csr_rw0", 8, 1)
-            .read_write("csr_rw1", 8, 1)
+            .read_write("csr_rw", 8, 2)
             .read_only("csr_ro", 8, 1)
             .trigger("csr_tw"),
     );

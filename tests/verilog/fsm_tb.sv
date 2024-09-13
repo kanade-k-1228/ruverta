@@ -5,7 +5,7 @@ module tb;
   initial begin
     $dumpfile("fsm.vcd");
     $dumpvars(0, dut);
-    #50000;
+    #10000;
     $finish;
   end
 

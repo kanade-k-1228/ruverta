@@ -139,65 +139,90 @@ impl Module {
         }
 
         // Write Logic
+        let init = {
+            let mut stmt = Stmt::begin();
+            for (_, _, entry) in &alocated {
+                if entry.len == 1 {
+                    stmt = stmt.assign(&entry.wname(), "0");
+                } else {
+                    for i in 0..entry.len {
+                        stmt = stmt.assign(&format!("{}[{}]", entry.wname(), i), "0");
+                    }
+                }
+            }
+            stmt.end()
+        };
+        let case = {
+            let mut cases = Case::new(&regmap.awaddr);
+            for (begin, end, entry) in &alocated {
+                match entry.ty {
+                    RegType::ReadWrite => {
+                        if entry.len == 1 {
+                            cases = cases.case(
+                                &format!("{}", begin),
+                                Stmt::assign(&entry.wname(), &regmap.wdata),
+                            );
+                        } else {
+                            for addr in *begin..(*end + 1) {
+                                cases = cases.case(
+                                    &format!("{}", addr),
+                                    Stmt::assign(
+                                        &format!("{}[{}]", entry.wname(), addr),
+                                        &regmap.wdata,
+                                    ),
+                                );
+                            }
+                        }
+                    }
+                    RegType::ReadOnly => {}
+                    RegType::Trigger => {
+                        cases = cases.case(
+                            &format!("{}", begin),
+                            Stmt::assign(&entry.wname(), &regmap.wdata),
+                        )
+                    }
+                }
+            }
+            cases.default(Stmt::empty())
+        };
         self = self.sync_ff(
             clk,
             rst,
-            {
-                alocated
-                    .iter()
-                    .fold(Stmt::begin(), |stmt, (_, _, entry)| {
-                        stmt.assign(&entry.wname(), "0")
-                    })
-                    .end()
-            },
+            init,
             Stmt::begin()
                 .r#if(
                     &format!("{} && {}", regmap.wvalid, regmap.awvalid),
-                    Stmt::begin()
-                        .case(
-                            alocated
-                                .iter()
-                                .filter_map(|(addr, _, entry)| match entry.ty {
-                                    RegType::ReadWrite => {
-                                        Some((addr, Stmt::assign(&entry.wname(), &regmap.wdata)))
-                                    }
-                                    RegType::ReadOnly => None,
-                                    RegType::Trigger => {
-                                        Some((addr, Stmt::assign(&entry.wname(), &regmap.wdata)))
-                                    }
-                                })
-                                .fold(Case::new(&regmap.awaddr), |case, (addr, stmt)| {
-                                    case.case(&format!("{}", addr), stmt)
-                                })
-                                .default(Stmt::empty()),
-                        )
-                        .end(),
+                    Stmt::begin().case(case).end(),
                 )
                 .end(),
         );
 
         // Read Logic
+        let case = {
+            let mut cases = Case::new(&regmap.araddr);
+            for (begin, end, entry) in &alocated {
+                if entry.len == 1 {
+                    cases = cases.case(
+                        &format!("{}", begin),
+                        Stmt::assign(&entry.wname(), &regmap.wdata),
+                    );
+                } else {
+                    for addr in *begin..(*end + 1) {
+                        cases = cases.case(
+                            &format!("{}", addr),
+                            Stmt::assign(&format!("{}[{}]", entry.wname(), addr), &regmap.wdata),
+                        );
+                    }
+                }
+            }
+            cases.default(Stmt::assign(&regmap.rdata, "0"))
+        };
         self = self.sync_ff(
             clk,
             rst,
             Stmt::assign(&regmap.rdata, "0"),
             Stmt::begin()
-                .r#if(
-                    &regmap.arvalid,
-                    Stmt::begin()
-                        .case({
-                            alocated.iter().fold(
-                                Case::new(&regmap.araddr),
-                                |case, (addr, _, entry)| {
-                                    case.case(
-                                        &format!("{}", addr),
-                                        Stmt::assign(&regmap.rdata, &entry.rname()),
-                                    )
-                                },
-                            )
-                        })
-                        .end(),
-                )
+                .r#if(&regmap.arvalid, Stmt::begin().case(case).end())
                 .end(),
         );
 

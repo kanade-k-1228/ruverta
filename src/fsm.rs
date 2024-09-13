@@ -101,6 +101,7 @@ impl Module {
                                 stmt = stmt
                                     .r#if(&trans.cond, Stmt::assign(&fsm.state_var, &trans.next));
                             }
+                            stmt = stmt.r#else(Stmt::assign(&fsm.state_var, &state.default));
                             stmt.end()
                         });
                     }
