@@ -26,7 +26,7 @@ SystemVerilog の簡単なサブセットのみをサポートしています。
   - [DFF](#dff)
   - [Comb](#comb)
   - [FSM](#fsm)
-  - [RegMap](#regmap)
+  - [AXILite](#axilite)
   - [Stream](#stream)
   - [FIFO](#fifo)
 - [Test](#test)
@@ -123,14 +123,14 @@ endmodule;
 
 ## 拡張 API
 
-|                   | Rust                         | Verilog                              | Test                                       |
-| ----------------- | ---------------------------- | ------------------------------------ | ------------------------------------------ |
-| [DFF](#dff)       | [dff.sv](tests/dff.rs)       | [dff.sv](tests/verilog/dff.sv)       | [dff_tb.sv](tests/verilog/dff_tb.sv)       |
-| [Comb](#comb)     | [comb.rs](tests/comb.rs)     | [comb.sv](tests/verilog/comb.sv)     | [comb_tb.sv](tests/verilog/comb_tb.sv)     |
-| [FSM](#fsm)       | [fsm.rs](tests/fsm.rs)       | [fsm.sv](tests/verilog/fsm.sv)       | [fsm_tb.sv](tests/verilog/fsm_tb.sv)       |
-| [RegMap](#regmap) | [regmap.rs](tests/regmap.rs) | [regmap.sv](tests/verilog/regmap.sv) | [regmap_tb.sv](tests/verilog/regmap_tb.sv) |
-| [Stream](#stream) | [stream.rs](tests/stream.rs) | [stream.sv](tests/verilog/stream.sv) |                                            |
-| [FIFO](#fifo)     | [fifo.rs](tests/fifo.rs)     | [fifo.sv](tests/verilog/fifo.sv)     |                                            |
+|                     | Rust                           | Verilog                                | Test                                         |
+| ------------------- | ------------------------------ | -------------------------------------- | -------------------------------------------- |
+| [DFF](#dff)         | [dff.sv](tests/dff.rs)         | [dff.sv](tests/verilog/dff.sv)         | [dff_tb.sv](tests/verilog/dff_tb.sv)         |
+| [Comb](#comb)       | [comb.rs](tests/comb.rs)       | [comb.sv](tests/verilog/comb.sv)       | [comb_tb.sv](tests/verilog/comb_tb.sv)       |
+| [FSM](#fsm)         | [fsm.rs](tests/fsm.rs)         | [fsm.sv](tests/verilog/fsm.sv)         | [fsm_tb.sv](tests/verilog/fsm_tb.sv)         |
+| [AXILite](#axilite) | [axilite.rs](tests/axilite.rs) | [axilite.sv](tests/verilog/axilite.sv) | [axilite_tb.sv](tests/verilog/axilite_tb.sv) |
+| [Stream](#stream)   | [stream.rs](tests/stream.rs)   | [stream.sv](tests/verilog/stream.sv)   |                                              |
+| [FIFO](#fifo)       | [fifo.rs](tests/fifo.rs)       | [fifo.sv](tests/verilog/fifo.sv)       |                                              |
 
 ### DFF
 
@@ -206,16 +206,16 @@ Module::new(name)
     );
 ```
 
-### RegMap
+### AXILite
 
 ```rust
 Module::new(name)
     .input("clk", 1)
     .input("rstn", 1)
-    .regmap(
+    .axilite(
         "clk",
         "rstn",
-        RegMap::new("cbus", 32)
+        AXILite::new("cbus", 32)
             .read_write("csr_rw0", 8, 1)
             .read_write("csr_rw1", 8, 1)
             .read_only("csr_ro", 8, 1)

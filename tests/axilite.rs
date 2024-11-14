@@ -1,14 +1,14 @@
-use ruverta::{module::Module, regmap::RegMap};
+use ruverta::{axilite::AXILite, module::Module};
 use std::{fs, path::PathBuf};
 
-const NAME: &str = "regmap";
+const NAME: &str = "axilite";
 
 #[test]
-fn test_regmap() {
-    let m = Module::new(NAME).input("clk", 1).input("rstn", 1).regmap(
+fn test_axilite() {
+    let m = Module::new(NAME).input("clk", 1).input("rstn", 1).axilite(
         "clk",
         "rstn",
-        RegMap::new("cbus", 32)
+        AXILite::new("cbus", 32)
             .read_write("csr_rw", 8, 2)
             .read_only("csr_ro", 8, 1)
             .trigger("csr_tw"),

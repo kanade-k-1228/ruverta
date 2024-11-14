@@ -3,7 +3,7 @@
 module tb;
 
   initial begin
-    $dumpfile("regmap.vcd");
+    $dumpfile("axilite.vcd");
     $dumpvars(0, dut);
     #50000;
     $finish;
@@ -41,7 +41,7 @@ module tb;
   logic        cbus_rready;
 
   // verilator lint_off WIDTHTRUNC
-  regmap dut (.*);
+  axilite dut (.*);
   // verilator lint_on WIDTHTRUNC
 
   // --------------------------------------------------------------------------

@@ -7,7 +7,7 @@ use crate::{
 // ----------------------------------------------------------------------------
 
 #[derive(Debug)]
-pub struct RegMap {
+pub struct AXILite {
     pub name: String,
     bit: usize,
     list: Vec<Entry>,
@@ -40,7 +40,7 @@ pub struct RegMap {
     rready: String,
 }
 
-impl RegMap {
+impl AXILite {
     pub fn new(name: &str, bit: usize) -> Self {
         assert!(bit == 32 || bit == 64);
         Self {
@@ -86,12 +86,12 @@ impl RegMap {
 }
 
 impl Module {
-    pub fn regmap(mut self, clk: &str, rst: &str, regmap: RegMap) -> Self {
+    pub fn axilite(mut self, clk: &str, rst: &str, axilite: AXILite) -> Self {
         // Allocate Registors
         let (aloc, size) = {
             let mut addr = 0;
             let mut aloc = vec![];
-            for entry in &regmap.list {
+            for entry in &axilite.list {
                 for idx in 0..entry.len() {
                     aloc.push(entry.allocate(addr, idx));
                     addr += 1;
@@ -103,26 +103,26 @@ impl Module {
 
         // IO Port
         self = self
-            .input(&regmap.awaddr, addr_width)
-            .input(&regmap.awvalid, 1)
-            .output(&regmap.awready, 1)
-            .input(&regmap.wdata, regmap.bit)
-            .input(&regmap.wstrb, regmap.bit / 8)
-            .input(&regmap.wvalid, 1)
-            .output(&regmap.wready, 1)
-            .output(&regmap.bresp, 2)
-            .output(&regmap.bvalid, 1)
-            .input(&regmap.bready, 1)
-            .input(&regmap.araddr, addr_width)
-            .input(&regmap.arvalid, 1)
-            .output(&regmap.arready, 1)
-            .output(&regmap.rdata, regmap.bit)
-            .output(&regmap.rresp, 2)
-            .output(&regmap.rvalid, 1)
-            .input(&regmap.rready, 1);
+            .input(&axilite.awaddr, addr_width)
+            .input(&axilite.awvalid, 1)
+            .output(&axilite.awready, 1)
+            .input(&axilite.wdata, axilite.bit)
+            .input(&axilite.wstrb, axilite.bit / 8)
+            .input(&axilite.wvalid, 1)
+            .output(&axilite.wready, 1)
+            .output(&axilite.bresp, 2)
+            .output(&axilite.bvalid, 1)
+            .input(&axilite.bready, 1)
+            .input(&axilite.araddr, addr_width)
+            .input(&axilite.arvalid, 1)
+            .output(&axilite.arready, 1)
+            .output(&axilite.rdata, axilite.bit)
+            .output(&axilite.rresp, 2)
+            .output(&axilite.rvalid, 1)
+            .input(&axilite.rready, 1);
 
         // Regs
-        for entry in &regmap.list {
+        for entry in &axilite.list {
             self = match entry {
                 Entry::ReadWrite { name, bit, len } => self.logic(name, *bit, *len),
                 Entry::ReadOnly { name, bit, len } => self.logic(name, *bit, *len),
@@ -144,12 +144,12 @@ impl Module {
             stmt.end()
         };
         let case = {
-            let mut cases = Case::new(&regmap.awaddr);
+            let mut cases = Case::new(&axilite.awaddr);
             for entry in &aloc {
                 if let Some(name) = &entry.write {
                     cases = cases.case(
                         &format!("{}", entry.addr),
-                        Stmt::assign(&name, &format!("{}{}", regmap.wdata, range(entry.bit, 0))),
+                        Stmt::assign(&name, &format!("{}{}", axilite.wdata, range(entry.bit, 0))),
                     );
                 }
             }
@@ -161,7 +161,7 @@ impl Module {
             init,
             Stmt::begin()
                 .r#if(
-                    &format!("{} && {}", regmap.wvalid, regmap.awvalid),
+                    &format!("{} && {}", axilite.wvalid, axilite.awvalid),
                     Stmt::begin().case(case).end(),
                 )
                 .end(),
@@ -169,23 +169,23 @@ impl Module {
 
         // Read Logic
         let case = {
-            let mut cases = Case::new(&regmap.araddr);
+            let mut cases = Case::new(&axilite.araddr);
             for entry in &aloc {
                 if let Some(name) = &entry.read {
                     cases = cases.case(
                         &format!("{}", entry.addr),
-                        Stmt::assign(&format!("{}{}", regmap.rdata, range(entry.bit, 0)), &name),
+                        Stmt::assign(&format!("{}{}", axilite.rdata, range(entry.bit, 0)), &name),
                     );
                 }
             }
-            cases.default(Stmt::assign(&regmap.rdata, "0"))
+            cases.default(Stmt::assign(&axilite.rdata, "0"))
         };
         self = self.sync_ff(
             clk,
             rst,
-            Stmt::assign(&regmap.rdata, "0"),
+            Stmt::assign(&axilite.rdata, "0"),
             Stmt::begin()
-                .r#if(&regmap.arvalid, Stmt::begin().case(case).end())
+                .r#if(&axilite.arvalid, Stmt::begin().case(case).end())
                 .end(),
         );
 
@@ -194,45 +194,45 @@ impl Module {
             clk,
             rst,
             Stmt::begin()
-                .assign(&regmap.awready, "0")
-                .assign(&regmap.wready, "0")
-                .assign(&regmap.bvalid, "0")
-                .assign(&regmap.arready, "0")
-                .assign(&regmap.rvalid, "0")
-                .assign(&regmap.bresp, "0")
-                .assign(&regmap.rresp, "0")
+                .assign(&axilite.awready, "0")
+                .assign(&axilite.wready, "0")
+                .assign(&axilite.bvalid, "0")
+                .assign(&axilite.arready, "0")
+                .assign(&axilite.rvalid, "0")
+                .assign(&axilite.bresp, "0")
+                .assign(&axilite.rresp, "0")
                 .end(),
             Stmt::begin()
                 .assign(
-                    &regmap.awready,
-                    &format!("{} && !{}", regmap.awvalid, regmap.awready),
+                    &axilite.awready,
+                    &format!("{} && !{}", axilite.awvalid, axilite.awready),
                 )
                 .assign(
-                    &regmap.wready,
-                    &format!("{} && !{}", regmap.wvalid, regmap.wready),
+                    &axilite.wready,
+                    &format!("{} && !{}", axilite.wvalid, axilite.wready),
                 )
                 .assign(
-                    &regmap.bvalid,
+                    &axilite.bvalid,
                     &format!(
                         "{} && {} && !{}",
-                        regmap.awready, regmap.wready, regmap.bvalid
+                        axilite.awready, axilite.wready, axilite.bvalid
                     ),
                 )
                 .assign(
-                    &regmap.arready,
-                    &format!("{} && !{}", regmap.arvalid, regmap.arready),
+                    &axilite.arready,
+                    &format!("{} && !{}", axilite.arvalid, axilite.arready),
                 )
                 .assign(
-                    &regmap.rvalid,
-                    &format!("{} && !{}", regmap.arvalid, regmap.arready),
+                    &axilite.rvalid,
+                    &format!("{} && !{}", axilite.arvalid, axilite.arready),
                 )
                 .r#if(
-                    &format!("{} && {}", regmap.bvalid, regmap.bready),
-                    Stmt::assign(&regmap.bvalid, "0"),
+                    &format!("{} && {}", axilite.bvalid, axilite.bready),
+                    Stmt::assign(&axilite.bvalid, "0"),
                 )
                 .r#if(
-                    &format!("{} && {}", regmap.rvalid, regmap.rready),
-                    Stmt::assign(&regmap.rvalid, "0"),
+                    &format!("{} && {}", axilite.rvalid, axilite.rready),
+                    Stmt::assign(&axilite.rvalid, "0"),
                 )
                 .end(),
         );
