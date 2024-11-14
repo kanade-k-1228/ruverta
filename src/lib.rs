@@ -1,4 +1,4 @@
-pub mod axilite;
+pub mod axi_lite_slave;
 pub mod comb;
 pub mod dff;
 pub mod fifo;

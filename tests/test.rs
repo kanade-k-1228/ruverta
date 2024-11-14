@@ -1,4 +1,4 @@
-use ruverta::{axilite::AXILite, module::Module, stmt::Stmt};
+use ruverta::{axi_lite_slave::AXILiteSlave, module::Module, stmt::Stmt};
 
 const NAME: &str = "uart";
 
@@ -9,10 +9,10 @@ fn test_uart() {
         .input("rstn", 1)
         .output("tx", 1)
         .input("rx", 1)
-        .axilite(
+        .axi_lite_slave(
             "clk",
             "rstn",
-            AXILite::new("csr", 32)
+            AXILiteSlave::new("csr", 32)
                 .read_write("div", 32, 1)
                 .read_write("tx_data", 8, 1)
                 .read_only("rx_data", 8, 1),

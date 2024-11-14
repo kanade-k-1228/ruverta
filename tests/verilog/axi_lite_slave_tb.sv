@@ -3,7 +3,7 @@
 module tb;
 
   initial begin
-    $dumpfile("axilite.vcd");
+    $dumpfile("axi_lite_slave.vcd");
     $dumpvars(0, dut);
     #50000;
     $finish;
@@ -41,7 +41,7 @@ module tb;
   logic        cbus_rready;
 
   // verilator lint_off WIDTHTRUNC
-  axilite dut (.*);
+  axi_lite_slave dut (.*);
   // verilator lint_on WIDTHTRUNC
 
   // --------------------------------------------------------------------------
@@ -64,7 +64,7 @@ module tb;
   // --------------------------------------------------------------------------
   // AXI Lite
 
-  task axil_init();
+  task axi_lite_init();
     begin
       cbus_awaddr  = 0;
       cbus_awprot  = 3'b000;
@@ -80,7 +80,7 @@ module tb;
     end
   endtask
 
-  task axil_write(input [31:0] addr, input [31:0] data);
+  task axi_lite_write(input [31:0] addr, input [31:0] data);
     begin
       cbus_awaddr  = addr;
       cbus_awvalid = 1;
@@ -98,7 +98,7 @@ module tb;
     end
   endtask
 
-  task axil_read(input [31:0] addr, output [31:0] data);
+  task axi_lite_read(input [31:0] addr, output [31:0] data);
     begin
       cbus_araddr  = addr;
       cbus_arvalid = 1;
@@ -124,22 +124,22 @@ module tb;
   initial begin
     clk  = 0;
     rstn = 1;
-    axil_init();
+    axi_lite_init();
     reset_dut();
 
     // Writing to all registers
 
-    axil_write(0, 32'hFFFF_FFFF);
-    axil_write(1, 32'hFFFF_FFFF);
-    axil_write(2, 32'hFFFF_FFFF);
-    axil_write(3, 32'hFFFF_FFFF);
+    axi_lite_write(0, 32'hFFFF_FFFF);
+    axi_lite_write(1, 32'hFFFF_FFFF);
+    axi_lite_write(2, 32'hFFFF_FFFF);
+    axi_lite_write(3, 32'hFFFF_FFFF);
 
     // Reading from all registers
 
-    axil_read(0, tmp_rdata);
-    axil_read(1, tmp_rdata);
-    axil_read(2, tmp_rdata);
-    axil_read(3, tmp_rdata);
+    axi_lite_read(0, tmp_rdata);
+    axi_lite_read(1, tmp_rdata);
+    axi_lite_read(2, tmp_rdata);
+    axi_lite_read(3, tmp_rdata);
 
     #20;
     $finish;
