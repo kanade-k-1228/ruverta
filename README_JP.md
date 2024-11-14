@@ -18,10 +18,13 @@ SystemVerilog の簡単なサブセットのみをサポートしています。
 
 - [インストール](#インストール)
 - [基本 API](#基本-api)
-  - [モジュール](#モジュール)
-  - [always\_comb](#always_comb)
-  - [always\_ff](#always_ff)
-  - [生成](#生成)
+  - [入出力ポート](#入出力ポート)
+  - [パラメタ](#パラメタ)
+  - [ワイヤ](#ワイヤ)
+  - [インスタンス](#インスタンス)
+  - [組み合わせ回路](#組み合わせ回路)
+  - [順序回路](#順序回路)
+  - [Verilog の生成](#verilog-の生成)
 - [拡張 API](#拡張-api)
   - [DFF](#dff)
   - [Comb](#comb)
@@ -46,7 +49,7 @@ ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
 
 ## 基本 API
 
-メソッドチェーンを用いてモジュールを作成します。
+`Module::new(name)` でモジュールを作成し、メソッドチェーンで要素を追加します。最後に `.verilog()` メソッドで Verilog コードを生成します。
 
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
@@ -92,36 +95,50 @@ endmodule;
 
 </td></tr></table>
 
-### モジュール
+### 入出力ポート
 
-`Module::new(name)` でモジュールを作成します。
-
-パラメタや入出力ポートを以下のメソッドで追加します。
-
-- `.param(name, default_value)`
 - `.input(name, width)`
 - `.output(name, width)`
 - `.inout(name, width)`
 
-### always_comb
+### パラメタ
 
-`Stmt` で文を作成します。
+- `.param(name, default_value)`
+- `.lparam(name, value)`
 
-### always_ff
+### ワイヤ
 
-`Sens::new()` でセンシティビティリストを作成し、監視するワイヤを以下のメソッドで追加します。
+- `.logic(name, bit, len)`
+
+### インスタンス
+
+- `.instant(inst: Instant)`
+
+### 組み合わせ回路
+
+- `.always_comb(stmt: Stmt)`
+
+`Stmt` は文を表すクラスです。
+
+### 順序回路
+
+- `.always_ff(Sens, Stmt)`
+
+`Sens` はセンシティビティリストを表すクラスです。
 
 - `.posedge(wire_name)`
 - `.negedge(wire_name)`
 - `.bothedge(wire_name)`
 
-### 生成
+### Verilog の生成
 
-`.verilog()` で verilog を生成します。`Vec<String>` なので `.join("\n")` してください。
+`.verilog()` で verilog を生成します。`Vec<String>` を返すので `.join("\n")` で結合してください。
 
 > API の設計はわりと雑なので、リクエストあったらなんでもどうぞ～
 
 ## 拡張 API
+
+Module のビルダメソッドを拡張して、さまざまな回路を簡単に構築できるようにします。
 
 |                               | Rust                                         | Verilog                                              | Test                                                       |
 | ----------------------------- | -------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- |

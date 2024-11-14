@@ -18,10 +18,13 @@ Supports only a simple subset of SystemVerilog.
 
 - [Installation](#installation)
 - [Basic API](#basic-api)
-  - [module](#module)
-  - [always\_comb](#always_comb)
-  - [always\_ff](#always_ff)
-  - [Generate](#generate)
+  - [Input/Output Ports](#inputoutput-ports)
+  - [Parameters](#parameters)
+  - [Wires](#wires)
+  - [Instances](#instances)
+  - [Combinational Circuits](#combinational-circuits)
+  - [Sequential Circuits](#sequential-circuits)
+  - [Verilog Generation](#verilog-generation)
 - [Extended API](#extended-api)
   - [DFF](#dff)
   - [Comb](#comb)
@@ -90,38 +93,50 @@ endmodule;
 
 </td></tr></table>
 
-### module
+### Input/Output Ports
 
-Create a module with Module::new(name).
-
-Add parameters and input/output ports with the following methods.
-
-- `.param(name, default_value)`
 - `.input(name, width)`
 - `.output(name, width)`
 - `.inout(name, width)`
 
-### always_comb
+### Parameters
 
-Create statements with Stmt.
+- `.param(name, default_value)`
+- `.lparam(name, value)`
 
-### always_ff
+### Wires
 
-Create a sensitivity list with `Sens::new()` and add wires to monitor with the following methods.
+- `.logic(name, bit, len)`
+
+### Instances
+
+- `.instant(inst: Instant)`
+
+### Combinational Circuits
+
+- `.always_comb(stmt: Stmt)`
+
+`Stmt` is a class representing a statement.
+
+### Sequential Circuits
+
+- `.always_ff(Sens, Stmt)`
+
+`Sens` is a class representing a sensitivity list.
 
 - `.posedge(wire_name)`
 - `.negedge(wire_name)`
 - `.bothedge(wire_name)`
 
-### Generate
+### Verilog Generation
 
-Generate verilog code with `.verilog()`. Since it returns `Vec<String>`, use `.join("\n")`.
+Generate Verilog with `.verilog()`. Since it returns `Vec<String>`, use `.join("\n")` to concatenate.
 
 > The API design is quite rough, so feel free to request anything~
 
 ## Extended API
 
-You can build some circuit easily.
+Extend the builder methods of Module to easily construct various circuits.
 
 |                               | Rust                                         | Verilog                                              | Test                                                       |
 | ----------------------------- | -------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- |
