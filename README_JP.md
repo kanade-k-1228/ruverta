@@ -29,6 +29,7 @@ SystemVerilog の簡単なサブセットのみをサポートしています。
   - [RegMap](#regmap)
   - [Stream](#stream)
   - [FIFO](#fifo)
+- [Test](#test)
 
 ## インストール
 
@@ -225,3 +226,21 @@ Module::new(name)
 ### Stream
 
 ### FIFO
+
+## Test
+
+`tests/` 以下にテストがあります。
+
+```bash
+$ cargo test
+```
+
+を実行すると `tests/verilog/` 以下に sv ファイルが出力されます。
+
+make を実行すると gtkwave が立ち上がり見えます。
+
+```bash
+ruverta/tests/verilog$ make ???
+```
+
+??? はテストケースの名前です。

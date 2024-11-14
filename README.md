@@ -29,6 +29,7 @@ Supports only a simple subset of SystemVerilog.
   - [RegMap](#regmap)
   - [Stream](#stream)
   - [FIFO](#fifo)
+- [Test](#test)
 
 ## Installation
 
@@ -225,3 +226,21 @@ Module::new(name)
 ### Stream
 
 ### FIFO
+
+## Test
+
+Tests are located under tests.
+
+```bash
+$ cargo test
+```
+
+will output sv files under `tests/verilog/`.
+
+Running make will launch gtkwave.
+
+```bash
+ruverta/tests/verilog$ make ???
+```
+
+??? is the name of the test case.
