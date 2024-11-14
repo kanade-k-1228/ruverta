@@ -1,6 +1,6 @@
 <div align="center">
 
-# ruverta
+# ruverta <!-- omit in toc -->
 
 **Rust to Verilog: Very Simple Verilog Builder**
 
@@ -8,13 +8,29 @@ English | [日本語](README_JP.md)
 
 </div>
 
-Only support tiny subset of sv.
+Supports only a simple subset of SystemVerilog.
 
-- Only `logic`: no `reg` or `wire`
-- Only `always_ff` : no `always`
-- Only `always_comb` : no `assign`
+- Variables: Only `logic` is available. No `reg` or `wire`.
+- Combinational circuits: Only `always_comb` is available. No `assign`.
+- Sequential circuits: Only `always_ff` is available. No `always`.
 
-## Install
+**Table of Contents**
+
+- [Installation](#installation)
+- [Basic API](#basic-api)
+  - [module](#module)
+  - [always\_comb](#always_comb)
+  - [always\_ff](#always_ff)
+  - [Generate](#generate)
+- [Extended API](#extended-api)
+  - [DFF](#dff)
+  - [Comb](#comb)
+  - [FSM](#fsm)
+  - [RegMap](#regmap)
+  - [Stream](#stream)
+  - [FIFO](#fifo)
+
+## Installation
 
 ```
 $ cargo add --git "https://github.com/kanade-k-1228/ruverta.git"
@@ -27,7 +43,7 @@ or
 ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
 ```
 
-## Basic module builder
+## Basic API
 
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
@@ -73,147 +89,139 @@ endmodule;
 
 </td></tr></table>
 
-## Advanced builder
+### module
+
+Create a module with Module::new(name).
+
+Add parameters and input/output ports with the following methods.
+
+- `.param(name, default_value)`
+- `.input(name, width)`
+- `.output(name, width)`
+- `.inout(name, width)`
+
+### always_comb
+
+Create statements with Stmt.
+
+### always_ff
+
+Create a sensitivity list with `Sens::new()` and add wires to monitor with the following methods.
+
+- `.posedge(wire_name)`
+- `.negedge(wire_name)`
+- `.bothedge(wire_name)`
+
+### Generate
+
+Generate verilog code with `.verilog()`. Since it returns `Vec<String>`, use `.join("\n")`.
+
+> The API design is quite rough, so feel free to request anything~
+
+## Extended API
 
 You can build some circuit easily.
 
-- DFF: Setup clock / reset
-- 
+|                   | Rust                         | Verilog                              | Test                                       |
+| ----------------- | ---------------------------- | ------------------------------------ | ------------------------------------------ |
+| [DFF](#dff)       | [dff.sv](tests/dff.rs)       | [dff.sv](tests/verilog/dff.sv)       | [dff_tb.sv](tests/verilog/dff_tb.sv)       |
+| [Comb](#comb)     | [comb.rs](tests/comb.rs)     | [comb.sv](tests/verilog/comb.sv)     | [comb_tb.sv](tests/verilog/comb_tb.sv)     |
+| [FSM](#fsm)       | [fsm.rs](tests/fsm.rs)       | [fsm.sv](tests/verilog/fsm.sv)       | [fsm_tb.sv](tests/verilog/fsm_tb.sv)       |
+| [RegMap](#regmap) | [regmap.rs](tests/regmap.rs) | [regmap.sv](tests/verilog/regmap.sv) | [regmap_tb.sv](tests/verilog/regmap_tb.sv) |
+| [Stream](#stream) | [stream.rs](tests/stream.rs) | [stream.sv](tests/verilog/stream.sv) |                                            |
+| [FIFO](#fifo)     | [fifo.rs](tests/fifo.rs)     | [fifo.sv](tests/verilog/fifo.sv)     |                                            |
 
-### Common Clock & Reset
+### DFF
 
-You can write `always_ff` slight easily.
+When implementing sequential circuits, it is recommended to use `sync_ff` / `async_ff` api instead of `always_ff`.
 
-<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
+DFF has several usage patterns depending on the clock and reset settings.
 
-```rust
-fn test_sm(){
-    let mut m = Module::new("test_mod")
-      .param("BIT", Some("8"))
-      .input("clk", 1)
-      .input("rstn", 1)
-      .input("in0", 8)
-      .input("in1", 8)
-      .output("out", 8)
-      .sync("clk", "rstn",
-        Dff::new("clk", "rstn").
-          .stmt("out <= in0 + in1;")
-      );
-    println!("{}", m.verilog().join("\n"));
-}
-```
+- clock edge: posedge / negedge / bothedge
+- reset edge: positive / negative
+- reset timing: sync / async
 
-</td><td>
+Currently, only the following patterns are supported.
 
-```verilog
-```
-
-</td></tr></table>
-
-### CSR Bus
-
-<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
+|            | clock edge | reset logic | reset timing |
+| ---------- | ---------- | ----------- | ------------ |
+| `sync_ff`  | posedge    | negative    | sync         |
+| `async_ff` | posedge    | negative    | async        |
 
 ```rust
-fn test_csr() {
-    let regmap = csr::RegMap::new("cbus", 32)
-        .read_only("ctrl", 8, 2)
-        .read_only("buf", 8, 1)
-        .trigger("start");
-    let module = module::Module::new("test_csr")
-        .regmap(&regmap)
-        .regio(&regmap);
-    println!("{}", module.verilog().join("\n"))
-}
+Module::new(name)
+    .input("clk", 1)
+    .input("rstn", 1)
+    .input("in0", 8)
+    .input("in1", 8)
+    .output("out", 8)
+    .sync_ff(
+        "clk",
+        "rstn",
+        Stmt::begin().assign("out", "0").end(),
+        Stmt::begin().assign("out", "in0 + in1").end(),
+    );
 ```
 
-</td><td>
+### Comb
 
-```verilog
-module test_csr #(
-) (
-  input  logic [ 6:0] cbus_awaddr,
-  input  logic        cbus_awvalid,
-  output logic        cbus_awready,
-  input  logic [31:0] cbus_wdata,
-  input  logic [ 3:0] cbus_wstrb,
-  input  logic        cbus_wvalid,
-  output logic        cbus_wready,
-  output logic [ 1:0] cbus_bresp,
-  output logic        cbus_bvalid,
-  input  logic        cbus_bready,
-  input  logic [ 6:0] cbus_araddr,
-  input  logic        cbus_arvalid,
-  output logic        cbus_arready,
-  output logic [31:0] cbus_rdata,
-  output logic        cbus_rvalid,
-  input  logic        cbus_rready,
-  input  logic [ 7:0] ro_ctrl,
-  input  logic [ 7:0] ro_buf,
-  output logic        tw_start_trig,
-  input  logic        tw_start_resp
-);
-  logic [ 7:0] ro_ctrl[ 7:0];
-  logic [ 7:0] ro_buf;
-  logic        tw_start_trig;
-  logic        tw_start_resp;
-endmodule;
-```
+When implementing combinational circuits, it is recommended to use `comb` instead of `always_comb`.
 
-</td></tr></table>
-
-### Combinational Circuit
-
-<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
+Since it always requires a default, there are no omissions in case distinctions.
 
 ```rust
-let mut module = Module::new("sample_mod");
-module.input("in0", 0, 0);
-module.input("in1", 0, 0);
-
-let mut comb = Comb::new(
-vec!["in0", "in1"],
-vec![
-    Wire{name: "out0", default: 0},
-    Wire{name: "out1", default: 1},
-]);
-comb.case()
-comb.default()
-
-Comb::build(module, comb);
+Module::new(name)
+    .input("clk", 1)
+    .input("rstn", 1)
+    .input("hoge", 1)
+    .comb(
+        Comb::new()
+            .input("in0")
+            .input("in1")
+            .output("out0")
+            .output("out1")
+            .case("in0==0", "out0=0", "out1=0")
+            .default("0", "1"),
+    );
 ```
 
-</td><td>
+### FSM
 
-```verilog
-```
-
-</td></tr></table>
-
-### State Machine
-
-<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
+Construct a state machine with a single state variable.
 
 ```rust
+Module::new(name)
+    .input("clk", 1)
+    .input("rstn", 1)
+    .input("hoge", 1)
+    .sync_fsm(
+        FSM::new("init", "clk", "rstn")
+            .state("init")
+            .jump("hoge == 1", "fuga")
+            .r#else("init")
+            .state("fuga")
+            .jump("hoge == 0", "init")
+            .r#else("fuga"),
+    );
 ```
 
-</td><td>
-
-```verilog
-```
-
-</td></tr></table>
-
-### And More Builders!
-
-<table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
+### RegMap
 
 ```rust
+Module::new(name)
+    .input("clk", 1)
+    .input("rstn", 1)
+    .regmap(
+        "clk",
+        "rstn",
+        RegMap::new("cbus", 32)
+            .read_write("csr_rw0", 8, 1)
+            .read_write("csr_rw1", 8, 1)
+            .read_only("csr_ro", 8, 1)
+            .trigger("csr_tw"),
+    );
 ```
 
-</td><td>
+### Stream
 
-```verilog
-```
-
-</td></tr></table>
+### FIFO
