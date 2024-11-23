@@ -11,10 +11,10 @@ pub struct Dff {
 }
 
 impl Dff {
-    pub fn new(clk: impl Into<String>, rst: impl Into<String>, init: Stmt, stmt: Stmt) -> Self {
+    pub fn new(clk: impl ToString, rst: impl ToString, init: Stmt, stmt: Stmt) -> Self {
         Self {
-            clk: clk.into(),
-            rst: rst.into(),
+            clk: clk.to_string(),
+            rst: rst.to_string(),
             init,
             stmt,
         }
@@ -24,8 +24,8 @@ impl Dff {
 impl Module {
     pub fn async_ff(
         mut self,
-        clk: impl Into<String>,
-        rst: impl Into<String>,
+        clk: impl ToString,
+        rst: impl ToString,
         init: Stmt,
         stmt: Stmt,
     ) -> Self {
@@ -41,8 +41,8 @@ impl Module {
     }
     pub fn sync_ff(
         mut self,
-        clk: impl Into<String>,
-        rst: impl Into<String>,
+        clk: impl ToString,
+        rst: impl ToString,
         init: Stmt,
         stmt: Stmt,
     ) -> Self {

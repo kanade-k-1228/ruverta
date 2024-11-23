@@ -7,9 +7,9 @@ pub struct Stream {
 }
 
 impl Stream {
-    pub fn new(name: impl Into<String>, bit: usize) -> Self {
+    pub fn new(name: impl ToString, bit: usize) -> Self {
         Self {
-            name: name.into(),
+            name: name.to_string(),
             bit,
         }
     }

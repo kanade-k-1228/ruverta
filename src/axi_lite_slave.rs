@@ -41,9 +41,9 @@ pub struct AXILiteSlave {
 }
 
 impl AXILiteSlave {
-    pub fn new(name: impl Into<String>, bit: usize) -> Self {
+    pub fn new(name: impl ToString, bit: usize) -> Self {
         assert!(bit == 32 || bit == 64);
-        let name: String = name.into();
+        let name: String = name.to_string();
         Self {
             name: name.clone(),
             bit,
@@ -68,19 +68,19 @@ impl AXILiteSlave {
         }
     }
 
-    pub fn read_write(mut self, name: impl Into<String>, bit: usize, len: usize) -> Self {
+    pub fn read_write(mut self, name: impl ToString, bit: usize, len: usize) -> Self {
         assert!(bit <= self.bit);
         self.list.push(Entry::read_write(name, bit, len));
         self
     }
 
-    pub fn read_only(mut self, name: impl Into<String>, bit: usize, len: usize) -> Self {
+    pub fn read_only(mut self, name: impl ToString, bit: usize, len: usize) -> Self {
         assert!(bit <= self.bit);
         self.list.push(Entry::read_only(name, bit, len));
         self
     }
 
-    pub fn trigger(mut self, name: impl Into<String>) -> Self {
+    pub fn trigger(mut self, name: impl ToString) -> Self {
         self.list.push(Entry::trigger(name));
         self
     }
@@ -89,8 +89,8 @@ impl AXILiteSlave {
 impl Module {
     pub fn axi_lite_slave(
         mut self,
-        clk: impl Into<String> + Clone,
-        rst: impl Into<String> + Clone,
+        clk: impl ToString + Clone,
+        rst: impl ToString + Clone,
         map: AXILiteSlave,
     ) -> Self {
         // Allocate Registors
@@ -258,26 +258,28 @@ enum Entry {
 }
 
 impl Entry {
-    fn read_only(name: impl Into<String>, bit: usize, len: usize) -> Self {
+    fn read_only(name: impl ToString, bit: usize, len: usize) -> Self {
         assert!(0 < bit);
         assert!(0 < len);
         Self::ReadOnly {
-            name: name.into(),
+            name: name.to_string(),
             bit,
             len,
         }
     }
-    fn read_write(name: impl Into<String>, bit: usize, len: usize) -> Self {
+    fn read_write(name: impl ToString, bit: usize, len: usize) -> Self {
         assert!(0 < bit);
         assert!(0 < len);
         Self::ReadWrite {
-            name: name.into(),
+            name: name.to_string(),
             bit,
             len,
         }
     }
-    fn trigger(name: impl Into<String>) -> Self {
-        Self::Trigger { name: name.into() }
+    fn trigger(name: impl ToString) -> Self {
+        Self::Trigger {
+            name: name.to_string(),
+        }
     }
 
     fn allocate(&self, addr: usize, idx: usize) -> Allocated {

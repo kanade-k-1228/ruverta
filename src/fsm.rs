@@ -28,23 +28,19 @@ struct Trans {
 }
 
 impl FSM {
-    pub fn new(
-        state_var: impl Into<String>,
-        clk: impl Into<String>,
-        rst: impl Into<String>,
-    ) -> Self {
+    pub fn new(state_var: impl ToString, clk: impl ToString, rst: impl ToString) -> Self {
         FSM {
-            state_var: state_var.into(),
-            clk: clk.into(),
-            rst: rst.into(),
+            state_var: state_var.to_string(),
+            clk: clk.to_string(),
+            rst: rst.to_string(),
             states: Vec::new(),
         }
     }
 
-    pub fn state(self, name: impl Into<String>) -> StateBuilder {
+    pub fn state(self, name: impl ToString) -> StateBuilder {
         StateBuilder {
             fsm: self,
-            name: name.into(),
+            name: name.to_string(),
             jumps: vec![],
         }
     }
@@ -57,10 +53,10 @@ pub struct StateBuilder {
 }
 
 impl StateBuilder {
-    pub fn jump(mut self, cond: impl Into<String>, next: impl Into<String>) -> Self {
+    pub fn jump(mut self, cond: impl ToString, next: impl ToString) -> Self {
         self.jumps.push(Trans {
-            cond: cond.into(),
-            next: next.into(),
+            cond: cond.to_string(),
+            next: next.to_string(),
         });
         self
     }
@@ -70,11 +66,11 @@ impl StateBuilder {
         self.r#else(&a)
     }
 
-    pub fn r#else(mut self, next: impl Into<String>) -> FSM {
+    pub fn r#else(mut self, next: impl ToString) -> FSM {
         let state = State {
             name: self.name,
             trans: self.jumps,
-            default: next.into(),
+            default: next.to_string(),
         };
         self.fsm.states.push(state);
         self.fsm

@@ -16,6 +16,7 @@ fn test_basic() {
         .input("in1", 8)
         .output("out", 8)
         .logic("tmp", 8, 1)
+        .lparam("param", 0)
         .always_comb(Stmt::assign("tmp", "in0 + in1"))
         .always_ff(Sens::new().posedge("clk"), Stmt::assign("out", "tmp"))
         .always_comb(

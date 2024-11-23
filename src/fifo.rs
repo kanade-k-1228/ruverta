@@ -12,8 +12,8 @@ pub struct FIFO {
 }
 
 impl FIFO {
-    pub fn new(name: impl Into<String>, bit: usize, len: usize) -> Self {
-        let name: String = name.into();
+    pub fn new(name: impl ToString, bit: usize, len: usize) -> Self {
+        let name: String = name.to_string();
         Self {
             name: name.clone(),
             bit,

@@ -18,7 +18,7 @@ impl Stmt {
     pub fn begin() -> Block {
         Block::begin()
     }
-    pub fn assign(var: impl Into<String>, val: impl Into<String>) -> Self {
+    pub fn assign(var: impl ToString, val: impl ToString) -> Self {
         Self::Assign(Assign::new(var, val))
     }
 }
@@ -124,10 +124,10 @@ pub struct Assign {
 }
 
 impl Assign {
-    fn new(var: impl Into<String>, val: impl Into<String>) -> Self {
+    fn new(var: impl ToString, val: impl ToString) -> Self {
         Self {
-            var: var.into(),
-            val: val.into(),
+            var: var.to_string(),
+            val: val.to_string(),
         }
     }
 }
@@ -148,15 +148,15 @@ pub struct Case {
 }
 
 impl Case {
-    pub fn new(var: impl Into<String>) -> Self {
+    pub fn new(var: impl ToString) -> Self {
         Self {
-            var: var.into(),
+            var: var.to_string(),
             case: vec![],
             default: None,
         }
     }
-    pub fn case(mut self, cond: impl Into<String>, stmt: Stmt) -> Self {
-        self.case.push((cond.into(), stmt));
+    pub fn case(mut self, cond: impl ToString, stmt: Stmt) -> Self {
+        self.case.push((cond.to_string(), stmt));
         self
     }
     pub fn default(mut self, stmt: Stmt) -> Self {

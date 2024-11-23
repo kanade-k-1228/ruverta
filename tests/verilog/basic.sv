@@ -8,6 +8,7 @@ module basic #(
     output logic [7:0] out
 );
   logic [7:0] tmp;
+  localparam param = 0;
   always_comb tmp = in0 + in1;
   always_ff @(posedge clk) out <= tmp;
   always_comb begin
