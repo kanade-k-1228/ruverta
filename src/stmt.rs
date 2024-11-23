@@ -67,7 +67,7 @@ impl Block {
     fn begin() -> Self {
         Self { body: vec![] }
     }
-    pub fn assign(mut self, var: &str, val: &str) -> Self {
+    pub fn assign(mut self, var: impl ToString, val: impl ToString) -> Self {
         self.body.push(Stmt::Assign(Assign::new(var, val)));
         self
     }
@@ -75,11 +75,11 @@ impl Block {
         self.body.push(Stmt::Case(case));
         self
     }
-    pub fn r#if(mut self, cond: &str, stmt: Stmt) -> Self {
+    pub fn r#if(mut self, cond: impl ToString, stmt: Stmt) -> Self {
         self.body.push(Stmt::If(cond.to_string(), Box::new(stmt)));
         self
     }
-    pub fn elif(mut self, cond: &str, stmt: Stmt) -> Self {
+    pub fn elif(mut self, cond: impl ToString, stmt: Stmt) -> Self {
         self.body.push(Stmt::ElIf(cond.to_string(), Box::new(stmt)));
         self
     }

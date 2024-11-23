@@ -304,7 +304,7 @@ pub struct Instant {
 }
 
 impl Instant {
-    pub fn new(name: &str, module: &str) -> Self {
+    pub fn new(name: impl ToString, module: impl ToString) -> Self {
         Self {
             name: name.to_string(),
             module: module.to_string(),
@@ -312,11 +312,11 @@ impl Instant {
             ports: vec![],
         }
     }
-    pub fn param(mut self, param: &str, val: &str) -> Self {
+    pub fn param(mut self, param: impl ToString, val: impl ToString) -> Self {
         self.params.push((param.to_string(), val.to_string()));
         self
     }
-    pub fn port(mut self, port: &str, wire: &str) -> Self {
+    pub fn port(mut self, port: impl ToString, wire: impl ToString) -> Self {
         self.ports.push((port.to_string(), wire.to_string()));
         self
     }
@@ -387,15 +387,15 @@ impl Sens {
     pub fn new() -> Self {
         Self { edges: vec![] }
     }
-    pub fn posedge(mut self, wire: &str) -> Self {
+    pub fn posedge(mut self, wire: impl ToString) -> Self {
         self.edges.push(Edge::Posedge(wire.to_string()));
         self
     }
-    pub fn negedge(mut self, wire: &str) -> Self {
+    pub fn negedge(mut self, wire: impl ToString) -> Self {
         self.edges.push(Edge::Negedge(wire.to_string()));
         self
     }
-    pub fn bothedge(mut self, wire: &str) -> Self {
+    pub fn bothedge(mut self, wire: impl ToString) -> Self {
         self.edges.push(Edge::Bothedge(wire.to_string()));
         self
     }
