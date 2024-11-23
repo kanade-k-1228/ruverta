@@ -12,9 +12,10 @@ pub struct FIFO {
 }
 
 impl FIFO {
-    pub fn new(name: &str, bit: usize, len: usize) -> Self {
+    pub fn new(name: impl Into<String>, bit: usize, len: usize) -> Self {
+        let name: String = name.into();
         Self {
-            name: name.to_string(),
+            name: name.clone(),
             bit,
             len,
             addr_width: clog2(len).unwrap_or(1),

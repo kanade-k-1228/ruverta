@@ -18,8 +18,8 @@ fn test_comb() {
                 .input("in1")
                 .output("out0")
                 .output("out1")
-                .case("in0==0", vec![format!("0"), format!("1")])
-                .default(vec![format!("in0"), format!("in1")]),
+                .case("in0==0", vec!["0", "1"])
+                .default(vec!["in0", "in1"]),
         );
     let s = m.verilog().join("\n");
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

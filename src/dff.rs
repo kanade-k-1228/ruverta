@@ -11,10 +11,10 @@ pub struct Dff {
 }
 
 impl Dff {
-    pub fn new(clk: &str, rst: &str, init: Stmt, stmt: Stmt) -> Self {
+    pub fn new(clk: impl Into<String>, rst: impl Into<String>, init: Stmt, stmt: Stmt) -> Self {
         Self {
-            clk: clk.to_string(),
-            rst: rst.to_string(),
+            clk: clk.into(),
+            rst: rst.into(),
             init,
             stmt,
         }
@@ -22,7 +22,13 @@ impl Dff {
 }
 
 impl Module {
-    pub fn async_ff(mut self, clk: &str, rst: &str, init: Stmt, stmt: Stmt) -> Self {
+    pub fn async_ff(
+        mut self,
+        clk: impl Into<String>,
+        rst: impl Into<String>,
+        init: Stmt,
+        stmt: Stmt,
+    ) -> Self {
         let dff = Dff::new(clk, rst, init, stmt);
         self = self.always_ff(
             Sens::new().posedge(&dff.clk).negedge(&dff.rst),
@@ -33,7 +39,13 @@ impl Module {
         );
         self
     }
-    pub fn sync_ff(mut self, clk: &str, rst: &str, init: Stmt, stmt: Stmt) -> Self {
+    pub fn sync_ff(
+        mut self,
+        clk: impl Into<String>,
+        rst: impl Into<String>,
+        init: Stmt,
+        stmt: Stmt,
+    ) -> Self {
         let dff = Dff::new(clk, rst, init, stmt);
         self = self.always_ff(
             Sens::new().posedge(&dff.clk),

@@ -18,7 +18,7 @@ impl Stmt {
     pub fn begin() -> Block {
         Block::begin()
     }
-    pub fn assign(var: &str, val: &str) -> Self {
+    pub fn assign(var: impl Into<String>, val: impl Into<String>) -> Self {
         Self::Assign(Assign::new(var, val))
     }
 }
@@ -124,17 +124,17 @@ pub struct Assign {
 }
 
 impl Assign {
-    fn new(var: &str, val: &str) -> Self {
+    fn new(var: impl Into<String>, val: impl Into<String>) -> Self {
         Self {
-            var: var.to_string(),
-            val: val.to_string(),
+            var: var.into(),
+            val: val.into(),
         }
     }
 }
 
 impl Assign {
     fn verilog(&self, assign_op: &str) -> String {
-        format!("{} {assign_op} {};", self.var, self.val)
+        format!("{} {} {};", self.var, assign_op, self.val)
     }
 }
 
@@ -148,15 +148,15 @@ pub struct Case {
 }
 
 impl Case {
-    pub fn new(var: &str) -> Self {
+    pub fn new(var: impl Into<String>) -> Self {
         Self {
-            var: var.to_string(),
+            var: var.into(),
             case: vec![],
             default: None,
         }
     }
-    pub fn case(mut self, cond: &str, stmt: Stmt) -> Self {
-        self.case.push((cond.to_string(), stmt));
+    pub fn case(mut self, cond: impl Into<String>, stmt: Stmt) -> Self {
+        self.case.push((cond.into(), stmt));
         self
     }
     pub fn default(mut self, stmt: Stmt) -> Self {

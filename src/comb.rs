@@ -25,29 +25,30 @@ pub struct CombBuilder {
 }
 
 impl CombBuilder {
-    pub fn input(mut self, name: &str) -> Self {
-        self.inputs.push(name.to_string());
+    pub fn input(mut self, name: impl Into<String>) -> Self {
+        self.inputs.push(name.into());
         self
     }
 
-    pub fn output(mut self, name: &str) -> Self {
-        self.outputs.push(name.to_string());
+    pub fn output(mut self, name: impl Into<String>) -> Self {
+        self.outputs.push(name.into());
         self
     }
 
-    pub fn case(mut self, cond: &str, outs: Vec<String>) -> Self {
+    pub fn case(mut self, cond: impl Into<String>, outs: Vec<impl Into<String>>) -> Self {
         assert!(self.outputs.len() == outs.len());
-        self.cases.push((cond.to_string(), outs));
+        self.cases
+            .push((cond.into(), outs.into_iter().map(Into::into).collect()));
         self
     }
 
-    pub fn default(self, outs: Vec<String>) -> Comb {
+    pub fn default(self, outs: Vec<impl Into<String>>) -> Comb {
         assert!(self.outputs.len() == outs.len());
         Comb {
             inputs: self.inputs,
             outputs: self.outputs,
             cases: self.cases,
-            default: outs,
+            default: outs.into_iter().map(Into::into).collect(),
         }
     }
 }

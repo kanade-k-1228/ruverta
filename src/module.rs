@@ -11,39 +11,39 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             params: vec![],
             ports: vec![],
             blocks: vec![],
         }
     }
-    pub fn input(mut self, name: &str, width: usize) -> Self {
+    pub fn input(mut self, name: impl Into<String>, width: usize) -> Self {
         assert!(width > 0);
         self.ports.push(Port::input(name, width, 1));
         self
     }
-    pub fn output(mut self, name: &str, width: usize) -> Self {
+    pub fn output(mut self, name: impl Into<String>, width: usize) -> Self {
         assert!(width > 0);
         self.ports.push(Port::output(name, width, 1));
         self
     }
-    pub fn inout(mut self, name: &str, width: usize) -> Self {
+    pub fn inout(mut self, name: impl Into<String>, width: usize) -> Self {
         assert!(width > 0);
         self.ports.push(Port::inout(name, width, 1));
         self
     }
-    pub fn param(mut self, name: &str, default: Option<&str>) -> Self {
+    pub fn param(mut self, name: impl Into<String>, default: Option<impl Into<String>>) -> Self {
         self.params.push(Param::new(name, default));
         self
     }
-    pub fn lparam(mut self, name: &str, val: &str) -> Self {
+    pub fn lparam(mut self, name: impl Into<String>, val: impl Into<String>) -> Self {
         self.blocks
-            .push(Block::LocalParam(LocalParam::new(name, val)));
+            .push(Block::LocalParam(LocalParam::new(name.into(), val.into())));
         self
     }
-    pub fn logic(mut self, name: &str, bit: usize, len: usize) -> Self {
+    pub fn logic(mut self, name: impl Into<String>, bit: usize, len: usize) -> Self {
         self.blocks.push(Block::Logic(Logic::new(name, bit, len)));
         self
     }
@@ -122,25 +122,25 @@ struct Port {
 }
 
 impl Port {
-    fn input(name: &str, bit: usize, len: usize) -> Self {
+    fn input(name: impl Into<String>, bit: usize, len: usize) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             direct: Direct::In,
             bit,
             len,
         }
     }
-    fn output(name: &str, bit: usize, len: usize) -> Self {
+    fn output(name: impl Into<String>, bit: usize, len: usize) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             direct: Direct::Out,
             bit,
             len,
         }
     }
-    fn inout(name: &str, bit: usize, len: usize) -> Self {
+    fn inout(name: impl Into<String>, bit: usize, len: usize) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             direct: Direct::InOut,
             bit,
             len,
@@ -196,10 +196,10 @@ struct Param {
 }
 
 impl Param {
-    fn new(name: &str, default: Option<&str>) -> Self {
+    fn new(name: impl Into<String>, default: Option<impl Into<String>>) -> Self {
         Self {
-            name: name.to_string(),
-            default: default.map(|s| s.to_string()),
+            name: name.into(),
+            default: default.map(|s| s.into()),
         }
     }
     fn verilog(&self) -> String {
@@ -242,7 +242,7 @@ struct LocalParam {
 }
 
 impl LocalParam {
-    fn new(name: &str, val: &str) -> Self {
+    fn new<S: ToString>(name: S, val: S) -> Self {
         Self {
             name: name.to_string(),
             val: val.to_string(),
@@ -266,9 +266,9 @@ struct Logic {
 }
 
 impl Logic {
-    fn new(name: &str, bit: usize, len: usize) -> Self {
+    fn new(name: impl Into<String>, bit: usize, len: usize) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             bit,
             len,
         }

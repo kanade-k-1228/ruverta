@@ -7,9 +7,9 @@ pub struct Stream {
 }
 
 impl Stream {
-    pub fn new(name: &str, bit: usize) -> Self {
+    pub fn new(name: impl Into<String>, bit: usize) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             bit,
         }
     }
@@ -26,18 +26,18 @@ impl Stream {
 
 impl Module {
     pub fn stream_slave(self, stream: Stream) -> Self {
-        self.input(&stream.data(), stream.bit)
-            .input(&stream.valid(), 1)
-            .output(&stream.ready(), 1)
+        self.input(stream.data(), stream.bit)
+            .input(stream.valid(), 1)
+            .output(stream.ready(), 1)
     }
     pub fn stream_master(self, stream: Stream) -> Self {
-        self.output(&stream.data(), stream.bit)
-            .output(&stream.valid(), 1)
-            .input(&stream.ready(), 1)
+        self.output(stream.data(), stream.bit)
+            .output(stream.valid(), 1)
+            .input(stream.ready(), 1)
     }
     pub fn stream_wire(self, stream: Stream) -> Self {
-        self.logic(&stream.data(), stream.bit, 1)
-            .logic(&stream.valid(), stream.bit, 1)
-            .logic(&stream.ready(), stream.bit, 1)
+        self.logic(stream.data(), stream.bit, 1)
+            .logic(stream.valid(), stream.bit, 1)
+            .logic(stream.ready(), stream.bit, 1)
     }
 }

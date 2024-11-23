@@ -41,10 +41,11 @@ pub struct AXILiteSlave {
 }
 
 impl AXILiteSlave {
-    pub fn new(name: &str, bit: usize) -> Self {
+    pub fn new(name: impl Into<String>, bit: usize) -> Self {
         assert!(bit == 32 || bit == 64);
+        let name: String = name.into();
         Self {
-            name: name.to_string(),
+            name: name.clone(),
             bit,
             list: vec![],
             awaddr: format!("{name}_awaddr"),
@@ -67,26 +68,31 @@ impl AXILiteSlave {
         }
     }
 
-    pub fn read_write(mut self, name: &str, bit: usize, len: usize) -> Self {
+    pub fn read_write(mut self, name: impl Into<String>, bit: usize, len: usize) -> Self {
         assert!(bit <= self.bit);
         self.list.push(Entry::read_write(name, bit, len));
         self
     }
 
-    pub fn read_only(mut self, name: &str, bit: usize, len: usize) -> Self {
+    pub fn read_only(mut self, name: impl Into<String>, bit: usize, len: usize) -> Self {
         assert!(bit <= self.bit);
         self.list.push(Entry::read_only(name, bit, len));
         self
     }
 
-    pub fn trigger(mut self, name: &str) -> Self {
+    pub fn trigger(mut self, name: impl Into<String>) -> Self {
         self.list.push(Entry::trigger(name));
         self
     }
 }
 
 impl Module {
-    pub fn axi_lite_slave(mut self, clk: &str, rst: &str, map: AXILiteSlave) -> Self {
+    pub fn axi_lite_slave(
+        mut self,
+        clk: impl Into<String> + Clone,
+        rst: impl Into<String> + Clone,
+        map: AXILiteSlave,
+    ) -> Self {
         // Allocate Registors
         let (aloc, size) = {
             let mut addr = 0;
@@ -149,15 +155,15 @@ impl Module {
                 if let Some(name) = &entry.write {
                     cases = cases.case(
                         &format!("{}", entry.addr),
-                        Stmt::assign(&name, &format!("{}{}", map.wdata, range(entry.bit, 0))),
+                        Stmt::assign(name, &format!("{}{}", map.wdata, range(entry.bit, 0))),
                     );
                 }
             }
             cases.default(Stmt::empty())
         };
         self = self.sync_ff(
-            clk,
-            rst,
+            clk.clone(),
+            rst.clone(),
             init,
             Stmt::begin()
                 .r#if(
@@ -174,15 +180,15 @@ impl Module {
                 if let Some(name) = &entry.read {
                     cases = cases.case(
                         &format!("{}", entry.addr),
-                        Stmt::assign(&format!("{}{}", map.rdata, range(entry.bit, 0)), &name),
+                        Stmt::assign(&format!("{}{}", map.rdata, range(entry.bit, 0)), name),
                     );
                 }
             }
             cases.default(Stmt::assign(&map.rdata, "0"))
         };
         self = self.sync_ff(
-            clk,
-            rst,
+            clk.clone(),
+            rst.clone(),
             Stmt::assign(&map.rdata, "0"),
             Stmt::begin()
                 .r#if(&map.arvalid, Stmt::begin().case(case).end())
@@ -252,28 +258,26 @@ enum Entry {
 }
 
 impl Entry {
-    fn read_only(name: &str, bit: usize, len: usize) -> Self {
+    fn read_only(name: impl Into<String>, bit: usize, len: usize) -> Self {
         assert!(0 < bit);
         assert!(0 < len);
         Self::ReadOnly {
-            name: name.to_string(),
+            name: name.into(),
             bit,
             len,
         }
     }
-    fn read_write(name: &str, bit: usize, len: usize) -> Self {
+    fn read_write(name: impl Into<String>, bit: usize, len: usize) -> Self {
         assert!(0 < bit);
         assert!(0 < len);
         Self::ReadWrite {
-            name: name.to_string(),
+            name: name.into(),
             bit,
             len,
         }
     }
-    fn trigger(name: &str) -> Self {
-        Self::Trigger {
-            name: name.to_string(),
-        }
+    fn trigger(name: impl Into<String>) -> Self {
+        Self::Trigger { name: name.into() }
     }
 
     fn allocate(&self, addr: usize, idx: usize) -> Allocated {
