@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Empty,
     Block(Block),
@@ -58,7 +58,7 @@ impl Stmt {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
     body: Vec<Stmt>,
 }
@@ -117,7 +117,7 @@ impl Block {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Assign {
     var: String,
     val: String,
@@ -140,7 +140,7 @@ impl Assign {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Case {
     var: String,
     case: Vec<(String, Stmt)>,

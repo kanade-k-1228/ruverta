@@ -6,7 +6,7 @@ use crate::{
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AXILiteSlave {
     pub name: String,
     bit: usize,
@@ -240,7 +240,7 @@ impl Module {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Entry {
     ReadWrite {
         name: String,
@@ -313,7 +313,7 @@ impl Entry {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Allocated {
     read: Option<String>,
     write: Option<String>,

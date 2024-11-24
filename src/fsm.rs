@@ -6,7 +6,7 @@ use crate::{
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FSM {
     state_var: String,
     clk: String,
@@ -14,14 +14,14 @@ pub struct FSM {
     states: Vec<State>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct State {
     name: String,
     trans: Vec<Trans>,
     default: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Trans {
     cond: String,
     next: String,

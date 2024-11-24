@@ -2,7 +2,7 @@ use crate::stmt::Stmt;
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Module {
     name: String,
     params: Vec<Param>,
@@ -115,7 +115,7 @@ impl Module {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Port {
     name: String,
     direct: Direct,
@@ -191,7 +191,7 @@ impl Direct {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Param {
     name: String,
     default: Option<String>,
@@ -214,7 +214,7 @@ impl Param {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Block {
     LocalParam(LocalParam),
     Logic(Logic),
@@ -237,7 +237,7 @@ impl Block {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct LocalParam {
     name: String,
     val: String,
@@ -260,7 +260,7 @@ impl LocalParam {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Logic {
     name: String,
     bit: usize,
@@ -295,7 +295,7 @@ impl Logic {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Instant {
     name: String,
     module: String,
@@ -357,7 +357,7 @@ fn test_instant() {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AlwaysFF {
     sens: Sens,
     stmt: Stmt,
@@ -378,7 +378,7 @@ impl AlwaysFF {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Sens {
     edges: Vec<Edge>,
 }
@@ -411,7 +411,7 @@ impl Sens {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Edge {
     Posedge(String),
     Negedge(String),
@@ -430,7 +430,7 @@ impl Edge {
 
 // ----------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AlwaysComb {
     stmt: Stmt,
 }

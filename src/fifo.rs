@@ -1,6 +1,6 @@
 use crate::{module::Module, util::clog2};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FIFO {
     pub name: String,
     bit: usize,

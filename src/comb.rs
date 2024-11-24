@@ -1,6 +1,6 @@
 use crate::{module::Module, stmt::Stmt};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Comb {
     inputs: Vec<String>,
     outputs: Vec<String>,

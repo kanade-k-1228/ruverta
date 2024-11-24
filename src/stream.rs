@@ -1,6 +1,6 @@
 use crate::module::Module;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stream {
     name: String,
     bit: usize,
