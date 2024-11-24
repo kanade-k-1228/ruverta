@@ -66,40 +66,8 @@ impl Module {
 
 impl Module {
     pub fn verilog(&self) -> Vec<String> {
-        let mut code: Vec<String> = Vec::new();
-
-        // Module def
-        {
-            code.push(format!("module {}", self.name));
-
-            // Params
-            if self.params.len() > 0 {
-                code.push(format!("#("));
-                for (i, param) in self.params.iter().enumerate() {
-                    if i < self.params.len() - 1 {
-                        code.push(format!("  {},", param.verilog()));
-                    } else {
-                        code.push(format!("  {}", param.verilog()));
-                    }
-                }
-                code.push(format!(")"));
-            }
-
-            // Ports
-            if self.ports.len() > 0 {
-                code.push(format!("("));
-                for (i, port) in self.ports.iter().enumerate() {
-                    if i < self.ports.len() - 1 {
-                        code.push(format!("  {},", port.verilog()));
-                    } else {
-                        code.push(format!("  {}", port.verilog()));
-                    }
-                }
-                code.push(format!(")"));
-            }
-
-            code.push(format!(";"));
-        }
+        let mut code: Vec<String> = vec![];
+        code.extend(self.module_header());
 
         for stmt in &self.blocks {
             for line in stmt.verilog() {
@@ -107,9 +75,84 @@ impl Module {
             }
         }
 
-        code.push(format!("endmodule"));
-
+        code.extend(self.module_footer());
         code
+    }
+
+    pub fn verilog_sorted(&self) -> Vec<String> {
+        let mut code: Vec<String> = vec![];
+        code.extend(self.module_header());
+
+        // LocalParams
+        for stmt in &self.blocks {
+            if matches!(stmt, Block::LocalParam(_)) {
+                for line in stmt.verilog() {
+                    code.push(format!("  {line}"))
+                }
+            }
+        }
+
+        // Logic
+        for stmt in &self.blocks {
+            if matches!(stmt, Block::Logic(_)) {
+                for line in stmt.verilog() {
+                    code.push(format!("  {line}"))
+                }
+            }
+        }
+
+        // Instant / AlwaysFF / AlwaysComb
+        for stmt in &self.blocks {
+            if matches!(stmt, Block::Instant(_))
+                | matches!(stmt, Block::AlwaysFF(_))
+                | matches!(stmt, Block::AlwaysComb(_))
+            {
+                for line in stmt.verilog() {
+                    code.push(format!("  {line}"))
+                }
+            }
+        }
+
+        code.extend(self.module_footer());
+        code
+    }
+
+    fn module_header(&self) -> Vec<String> {
+        let mut code: Vec<String> = Vec::new();
+        code.push(format!("module {}", self.name));
+
+        // Params
+        if self.params.len() > 0 {
+            code.push(format!("#("));
+            for (i, param) in self.params.iter().enumerate() {
+                if i < self.params.len() - 1 {
+                    code.push(format!("  {},", param.verilog()));
+                } else {
+                    code.push(format!("  {}", param.verilog()));
+                }
+            }
+            code.push(format!(")"));
+        }
+
+        // Ports
+        if self.ports.len() > 0 {
+            code.push(format!("("));
+            for (i, port) in self.ports.iter().enumerate() {
+                if i < self.ports.len() - 1 {
+                    code.push(format!("  {},", port.verilog()));
+                } else {
+                    code.push(format!("  {}", port.verilog()));
+                }
+            }
+            code.push(format!(")"));
+        }
+
+        code.push(format!(";"));
+        code
+    }
+
+    fn module_footer(&self) -> Vec<String> {
+        vec![format!("endmodule")]
     }
 }
 
