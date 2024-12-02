@@ -1,4 +1,7 @@
-use ruverta::{axi_lite_slave::AXILiteSlave, module::Module};
+use ruverta::{
+    bus::{axi_lite_slave::AXILiteSlave, MMap},
+    module::Module,
+};
 use std::{fs, path::PathBuf};
 
 const NAME: &str = "axi_lite_slave";
@@ -11,10 +14,13 @@ fn test_axi_lite_slave() {
         .axi_lite_slave(
             "clk",
             "rstn",
-            AXILiteSlave::new("cbus", 32)
-                .read_write("csr_rw", 8, 2)
-                .read_only("csr_ro", 8, 1)
-                .trigger("csr_tw"),
+            AXILiteSlave::new(
+                "cbus",
+                MMap::new(32, 32)
+                    .read_write("csr_rw", 8, 2)
+                    .read_only("csr_ro", 8, 1)
+                    .trigger("csr_tw"),
+            ),
         );
     let s = m.verilog().join("\n");
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

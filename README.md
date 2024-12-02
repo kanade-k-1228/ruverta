@@ -29,9 +29,9 @@ Supports only a simple subset of SystemVerilog.
   - [DFF](#dff)
   - [Comb](#comb)
   - [FSM](#fsm)
-  - [AXILiteSlave](#axiliteslave)
   - [Stream](#stream)
   - [FIFO](#fifo)
+- [Bus API](#bus-api)
 - [Test](#test)
 
 ## Installation
@@ -144,6 +144,7 @@ Extend the builder methods of Module to easily construct various circuits.
 | [Comb](#comb)                 | [comb.rs](tests/comb.rs)                     | [comb.sv](tests/verilog/comb.sv)                     | [comb_tb.sv](tests/verilog/comb_tb.sv)                     |
 | [FSM](#fsm)                   | [fsm.rs](tests/fsm.rs)                       | [fsm.sv](tests/verilog/fsm.sv)                       | [fsm_tb.sv](tests/verilog/fsm_tb.sv)                       |
 | [AXILiteSlave](#axiliteslave) | [axi_lite_slave.rs](tests/axi_lite_slave.rs) | [axi_lite_slave.sv](tests/verilog/axi_lite_slave.sv) | [axi_lite_slave_tb.sv](tests/verilog/axi_lite_slave_tb.sv) |
+| [PicoSlave](#picoslave)       |                                              |                                                      |                                                            |
 | [Stream](#stream)             | [stream.rs](tests/stream.rs)                 | [stream.sv](tests/verilog/stream.sv)                 |                                                            |
 | [FIFO](#fifo)                 | [fifo.rs](tests/fifo.rs)                     | [fifo.sv](tests/verilog/fifo.sv)                     |                                                            |
 
@@ -221,26 +222,36 @@ Module::new(name)
     );
 ```
 
-### AXILiteSlave
-
-```rust
-Module::new(name)
-    .input("clk", 1)
-    .input("rstn", 1)
-    .axi_lite_slave(
-        "clk",
-        "rstn",
-        AXILiteSlave::new("cbus", 32)
-            .read_write("csr_rw0", 8, 1)
-            .read_write("csr_rw1", 8, 1)
-            .read_only("csr_ro", 8, 1)
-            .trigger("csr_tw"),
-    );
-```
-
 ### Stream
 
 ### FIFO
+
+## Bus API
+
+|              | Rust                                         | Verilog                                              | Test                                                       |
+| ------------ | -------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- |
+| AXILiteSlave | [axi_lite_slave.rs](tests/axi_lite_slave.rs) | [axi_lite_slave.sv](tests/verilog/axi_lite_slave.sv) | [axi_lite_slave_tb.sv](tests/verilog/axi_lite_slave_tb.sv) |
+| PicoSlave    |                                              |                                                      |                                                            |
+
+```rust
+Module::new(name)
+  .input("clk", 1)
+  .input("rstn", 1)
+  .axi_lite_slave(
+    "clk",
+    "rstn",
+    AXILiteSlave::new(
+      "cbus",
+      MMap::new(32, 32)
+        .read_write("csr_rw", 8, 2)
+        .read_only("csr_ro", 8, 1)
+        .trigger("csr_tw"),
+      ),
+  );
+```
+
+- AXI Lite Slave
+- Pico Slave
 
 ## Test
 

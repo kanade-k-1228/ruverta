@@ -1,4 +1,8 @@
-use ruverta::{axi_lite_slave::AXILiteSlave, module::Module, stmt::Stmt};
+use ruverta::{
+    bus::{axi_lite_slave::AXILiteSlave, MMap},
+    module::Module,
+    stmt::Stmt,
+};
 
 const NAME: &str = "uart";
 
@@ -12,10 +16,13 @@ fn test_uart() {
         .axi_lite_slave(
             "clk",
             "rstn",
-            AXILiteSlave::new("csr", 32)
-                .read_write("div", 32, 1)
-                .read_write("tx_data", 8, 1)
-                .read_only("rx_data", 8, 1),
+            AXILiteSlave::new(
+                "csr",
+                MMap::new(32, 32)
+                    .read_write("div", 32, 1)
+                    .read_write("tx_data", 8, 1)
+                    .read_only("rx_data", 8, 1),
+            ),
         )
         .async_ff(
             "clk",
