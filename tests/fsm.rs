@@ -1,13 +1,8 @@
-use ruverta::{fsm::FSM, module::Module};
-use std::{fs, path::PathBuf};
+use ruverta::{fsm::FSM, mod_test, module::Module};
 
-const NAME: &str = "fsm";
-
-const INIT: &str = "INIT";
-const RUNNING: &str = "RUNNING";
-
-#[test]
-fn test_fsm() {
+mod_test!(fsm, {
+    const INIT: &str = "INIT";
+    const RUNNING: &str = "RUNNING";
     let fsm = FSM::new("state", "clk", "rstn")
         .state(INIT)
         .jump("in0 == 1", RUNNING)
@@ -15,14 +10,10 @@ fn test_fsm() {
         .state(RUNNING)
         .jump("in1 == 1", INIT)
         .r#else(RUNNING);
-    let m = Module::new(NAME)
+    Module::new("fsm")
         .input("clk", 1)
         .input("rstn", 1)
         .input("in0", 1)
         .input("in1", 1)
-        .sync_fsm(fsm);
-    let s = m.verilog().join("\n");
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push(format!("tests/verilog/{}.sv", NAME));
-    fs::write(path, s).unwrap();
-}
+        .sync_fsm(fsm)
+});

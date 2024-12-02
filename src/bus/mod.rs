@@ -1,12 +1,18 @@
-pub mod axi_lite_slave;
-pub mod pico_master;
+pub mod axi_lite;
+mod common;
 pub mod pico_slave;
 
 // ----------------------------------------------------------------------------
+
 use crate::util::sel;
 
 #[derive(Debug, Clone)]
-pub enum Entry {
+pub struct RegList {
+    regs: Vec<Reg>,
+}
+
+#[derive(Debug, Clone)]
+enum Reg {
     ReadWrite {
         name: String,
         bit: usize,
@@ -17,105 +23,118 @@ pub enum Entry {
         bit: usize,
         len: usize,
     },
+    WriteOnly {
+        name: String,
+        bit: usize,
+        len: usize,
+    },
     Trigger {
         name: String,
     },
 }
 
-impl Entry {
-    fn read_only(name: impl ToString, bit: usize, len: usize) -> Self {
-        assert!(0 < bit);
-        assert!(0 < len);
-        Self::ReadOnly {
-            name: name.to_string(),
-            bit,
-            len,
-        }
-    }
-    fn read_write(name: impl ToString, bit: usize, len: usize) -> Self {
-        assert!(0 < bit);
-        assert!(0 < len);
-        Self::ReadWrite {
-            name: name.to_string(),
-            bit,
-            len,
-        }
-    }
-    fn trigger(name: impl ToString) -> Self {
-        Self::Trigger {
-            name: name.to_string(),
-        }
-    }
-
-    fn allocate(&self, addr: usize, idx: usize) -> Allocated {
-        match self {
-            Self::ReadWrite { name, bit, len } => Allocated {
-                read: Some(format!("{}{}", name, sel(idx, *len))),
-                write: Some(format!("{}{}", name, sel(idx, *len))),
-                bit: *bit,
-                addr,
-            },
-            Self::ReadOnly { name, bit, len } => Allocated {
-                read: Some(format!("{}{}", name, sel(idx, *len))),
-                write: None,
-                bit: *bit,
-                addr,
-            },
-            Self::Trigger { name } => Allocated {
-                read: Some(format!("{}_resp", name)),
-                write: Some(format!("{}_trig", name)),
-                bit: 1,
-                addr,
-            },
-        }
-    }
+impl Reg {
     fn len(&self) -> usize {
         match self {
             Self::ReadWrite { len, .. } => *len,
             Self::ReadOnly { len, .. } => *len,
+            Self::WriteOnly { len, .. } => *len,
             Self::Trigger { .. } => 1,
         }
     }
 }
 
+impl RegList {
+    pub fn new() -> Self {
+        Self { regs: vec![] }
+    }
+    pub fn read_write(mut self, name: impl ToString, bit: usize, len: usize) -> Self {
+        assert!(0 < bit && 0 < len);
+        self.regs.push(Reg::ReadWrite {
+            name: name.to_string(),
+            bit,
+            len,
+        });
+        self
+    }
+    pub fn read_only(mut self, name: impl ToString, bit: usize, len: usize) -> Self {
+        assert!(0 < bit && 0 < len);
+        self.regs.push(Reg::ReadOnly {
+            name: name.to_string(),
+            bit,
+            len,
+        });
+        self
+    }
+    pub fn trigger(mut self, name: impl ToString) -> Self {
+        self.regs.push(Reg::Trigger {
+            name: name.to_string(),
+        });
+        self
+    }
+}
+
+// ----------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
-pub struct Allocated {
-    read: Option<String>,
-    write: Option<String>,
+pub struct MemMap {
+    data_bit: usize,
+    addr_bit: usize,
+    regs: Vec<Reg>,
+    map: Vec<Entry>,
+}
+
+#[derive(Debug, Clone)]
+struct Entry {
     addr: usize,
     bit: usize,
+    read: Option<String>,
+    write: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct MMap {
-    pub(in crate::bus) data_width: usize,
-    pub(in crate::bus) addr_width: usize,
-    pub(in crate::bus) list: Vec<Entry>,
-}
-
-impl MMap {
-    pub fn new(data_width: usize, addr_width: usize) -> Self {
-        Self {
-            data_width,
-            addr_width,
-            list: vec![],
-        }
-    }
-
-    pub fn read_write(mut self, name: impl ToString, bit: usize, len: usize) -> Self {
-        assert!(bit <= self.data_width);
-        self.list.push(Entry::read_write(name, bit, len));
-        self
-    }
-
-    pub fn read_only(mut self, name: impl ToString, bit: usize, len: usize) -> Self {
-        assert!(bit <= self.data_width);
-        self.list.push(Entry::read_only(name, bit, len));
-        self
-    }
-
-    pub fn trigger(mut self, name: impl ToString) -> Self {
-        self.list.push(Entry::trigger(name));
-        self
+impl RegList {
+    pub fn allocate_greedy(self, data_bit: usize, addr_bit: usize) -> MemMap {
+        let (list, _) = {
+            let mut addr = 0;
+            let mut list = vec![];
+            for entry in &self.regs {
+                for idx in 0..entry.len() {
+                    list.push(match entry {
+                        Reg::ReadWrite { name, bit, len } => Entry {
+                            read: Some(format!("{}{}", name, sel(idx, *len))),
+                            write: Some(format!("{}{}", name, sel(idx, *len))),
+                            bit: *bit,
+                            addr,
+                        },
+                        Reg::ReadOnly { name, bit, len } => Entry {
+                            read: Some(format!("{}{}", name, sel(idx, *len))),
+                            write: None,
+                            bit: *bit,
+                            addr,
+                        },
+                        Reg::WriteOnly { name, bit, len } => Entry {
+                            read: None,
+                            write: Some(format!("{}{}", name, sel(idx, *len))),
+                            bit: *bit,
+                            addr,
+                        },
+                        Reg::Trigger { name } => Entry {
+                            read: Some(format!("{}_resp", name)),
+                            write: Some(format!("{}_trig", name)),
+                            bit: 1,
+                            addr,
+                        },
+                    });
+                    addr += 1;
+                }
+            }
+            (list, addr)
+        };
+        return MemMap {
+            data_bit,
+            addr_bit,
+            regs: self.regs,
+            map: list,
+        };
     }
 }

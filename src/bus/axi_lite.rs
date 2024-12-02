@@ -1,16 +1,17 @@
-use super::{Entry, MMap};
+use super::MemMap;
 use crate::{
     module::Module,
     stmt::{Case, Stmt},
-    util::{clog2, range},
+    util::range,
 };
 
 // ----------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-pub struct AXILiteSlave {
-    pub name: String,
-    mmap: MMap,
+struct AXILite {
+    _name: String,
+    clk: String,
+    rst: String,
 
     // Write Addr
     awaddr: String,
@@ -40,33 +41,32 @@ pub struct AXILiteSlave {
     rready: String,
 }
 
-impl AXILiteSlave {
-    pub fn new(name: impl ToString, mmap: MMap) -> Self {
-        assert!(
-            mmap.data_width == 32 || mmap.data_width == 64,
-            "AXI Lite supprots 32 or 64 bit data bus"
-        );
-        let name: String = name.to_string();
+impl AXILite {
+    fn new(name: Option<&str>, clk: impl ToString, rst: impl ToString) -> Self {
+        let name: String = name
+            .map(|n| format!("{}_", n.to_string()))
+            .unwrap_or(format!(""));
         Self {
-            name: name.clone(),
-            mmap,
-            awaddr: format!("{name}_awaddr"),
-            awvalid: format!("{name}_awvalid"),
-            awready: format!("{name}_awready"),
-            wdata: format!("{name}_wdata"),
-            wstrb: format!("{name}_wstrb"),
-            wvalid: format!("{name}_wvalid"),
-            wready: format!("{name}_wready"),
-            bresp: format!("{name}_bresp"),
-            bvalid: format!("{name}_bvalid"),
-            bready: format!("{name}_bready"),
-            araddr: format!("{name}_araddr"),
-            arvalid: format!("{name}_arvalid"),
-            arready: format!("{name}_arready"),
-            rdata: format!("{name}_rdata"),
-            rresp: format!("{name}_rresp"),
-            rvalid: format!("{name}_rvalid"),
-            rready: format!("{name}_rready"),
+            _name: name.clone(),
+            clk: clk.to_string(),
+            rst: rst.to_string(),
+            awaddr: format!("{name}awaddr"),
+            awvalid: format!("{name}awvalid"),
+            awready: format!("{name}awready"),
+            wdata: format!("{name}wdata"),
+            wstrb: format!("{name}wstrb"),
+            wvalid: format!("{name}wvalid"),
+            wready: format!("{name}wready"),
+            bresp: format!("{name}bresp"),
+            bvalid: format!("{name}bvalid"),
+            bready: format!("{name}bready"),
+            araddr: format!("{name}araddr"),
+            arvalid: format!("{name}arvalid"),
+            arready: format!("{name}arready"),
+            rdata: format!("{name}rdata"),
+            rresp: format!("{name}rresp"),
+            rvalid: format!("{name}rvalid"),
+            rready: format!("{name}rready"),
         }
     }
 }
@@ -74,60 +74,40 @@ impl AXILiteSlave {
 impl Module {
     pub fn axi_lite_slave(
         mut self,
-        clk: impl ToString + Clone,
-        rst: impl ToString + Clone,
-        bus: AXILiteSlave,
+        name: Option<&str>,
+        clk: impl ToString,
+        rst: impl ToString,
+        mem: MemMap,
     ) -> Self {
-        // Allocate Registors
-        let (aloc, size) = {
-            let mut addr = 0;
-            let mut aloc = vec![];
-            for entry in &bus.mmap.list {
-                for idx in 0..entry.len() {
-                    aloc.push(entry.allocate(addr, idx));
-                    addr += 1;
-                }
-            }
-            (aloc, addr)
-        };
-        let addr_width = clog2(size).unwrap_or(1);
+        let bus = AXILite::new(name, clk, rst);
+
+        // Regs
+        self = self.define_regs(&mem);
 
         // IO Port
         self = self
-            .input(&bus.awaddr, addr_width)
+            .input(&bus.awaddr, mem.addr_bit)
             .input(&bus.awvalid, 1)
             .output(&bus.awready, 1)
-            .input(&bus.wdata, bus.mmap.data_width)
-            .input(&bus.wstrb, bus.mmap.data_width / 8)
+            .input(&bus.wdata, mem.data_bit)
+            .input(&bus.wstrb, mem.data_bit / 8)
             .input(&bus.wvalid, 1)
             .output(&bus.wready, 1)
             .output(&bus.bresp, 2)
             .output(&bus.bvalid, 1)
             .input(&bus.bready, 1)
-            .input(&bus.araddr, addr_width)
+            .input(&bus.araddr, mem.addr_bit)
             .input(&bus.arvalid, 1)
             .output(&bus.arready, 1)
-            .output(&bus.rdata, bus.mmap.data_width)
+            .output(&bus.rdata, mem.data_bit)
             .output(&bus.rresp, 2)
             .output(&bus.rvalid, 1)
             .input(&bus.rready, 1);
 
-        // Regs
-        for entry in &bus.mmap.list {
-            self = match entry {
-                Entry::ReadWrite { name, bit, len } => self.logic(name, *bit, *len),
-                Entry::ReadOnly { name, bit, len } => self.logic(name, *bit, *len),
-                Entry::Trigger { name } => {
-                    self.logic(&format!("{name}_trig"), 1, 1)
-                        .logic(&format!("{name}_resp"), 1, 1)
-                }
-            };
-        }
-
         // Write Logic
         let init = {
             let mut stmt = Stmt::begin();
-            for entry in &aloc {
+            for entry in &mem.map {
                 if let Some(name) = &entry.write {
                     stmt = stmt.assign(&name, "0");
                 }
@@ -136,7 +116,7 @@ impl Module {
         };
         let case = {
             let mut cases = Case::new(&bus.awaddr);
-            for entry in &aloc {
+            for entry in &mem.map {
                 if let Some(name) = &entry.write {
                     cases = cases.case(
                         &format!("{}", entry.addr),
@@ -147,8 +127,8 @@ impl Module {
             cases.default(Stmt::empty())
         };
         self = self.sync_ff(
-            clk.clone(),
-            rst.clone(),
+            bus.clk.clone(),
+            bus.rst.clone(),
             init,
             Stmt::begin()
                 .r#if(
@@ -161,7 +141,7 @@ impl Module {
         // Read Logic
         let case = {
             let mut cases = Case::new(&bus.araddr);
-            for entry in &aloc {
+            for entry in &mem.map {
                 if let Some(name) = &entry.read {
                     cases = cases.case(
                         &format!("{}", entry.addr),
@@ -172,8 +152,8 @@ impl Module {
             cases.default(Stmt::assign(&bus.rdata, "0"))
         };
         self = self.sync_ff(
-            clk.clone(),
-            rst.clone(),
+            bus.clk.clone(),
+            bus.rst.clone(),
             Stmt::assign(&bus.rdata, "0"),
             Stmt::begin()
                 .r#if(&bus.arvalid, Stmt::begin().case(case).end())
@@ -182,8 +162,8 @@ impl Module {
 
         // AXI Lite Protocol
         self = self.sync_ff(
-            clk,
-            rst,
+            bus.clk,
+            bus.rst,
             Stmt::begin()
                 .assign(&bus.awready, "0")
                 .assign(&bus.wready, "0")

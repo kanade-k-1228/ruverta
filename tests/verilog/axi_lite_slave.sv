@@ -1,7 +1,7 @@
 module axi_lite_slave (
     input  logic        clk,
     input  logic        rstn,
-    input  logic [ 1:0] cbus_awaddr,
+    input  logic [ 7:0] cbus_awaddr,
     input  logic        cbus_awvalid,
     output logic        cbus_awready,
     input  logic [31:0] cbus_wdata,
@@ -11,7 +11,7 @@ module axi_lite_slave (
     output logic [ 1:0] cbus_bresp,
     output logic        cbus_bvalid,
     input  logic        cbus_bready,
-    input  logic [ 1:0] cbus_araddr,
+    input  logic [ 7:0] cbus_araddr,
     input  logic        cbus_arvalid,
     output logic        cbus_arready,
     output logic [31:0] cbus_rdata,
@@ -19,7 +19,7 @@ module axi_lite_slave (
     output logic        cbus_rvalid,
     input  logic        cbus_rready
 );
-  logic [7:0] csr_rw      [1:0];
+  logic [7:0] csr_rw      [3:0];
   logic [7:0] csr_ro;
   logic       csr_tw_trig;
   logic       csr_tw_resp;
@@ -27,13 +27,17 @@ module axi_lite_slave (
     if (!rstn) begin
       csr_rw[0]   <= 0;
       csr_rw[1]   <= 0;
+      csr_rw[2]   <= 0;
+      csr_rw[3]   <= 0;
       csr_tw_trig <= 0;
     end else begin
       if (cbus_wvalid && cbus_awvalid) begin
         case (cbus_awaddr)
           0: csr_rw[0] <= cbus_wdata[7:0];
           1: csr_rw[1] <= cbus_wdata[7:0];
-          3: csr_tw_trig <= cbus_wdata[0:0];
+          2: csr_rw[2] <= cbus_wdata[7:0];
+          3: csr_rw[3] <= cbus_wdata[7:0];
+          5: csr_tw_trig <= cbus_wdata[0:0];
           default: ;
         endcase
       end
@@ -46,8 +50,10 @@ module axi_lite_slave (
         case (cbus_araddr)
           0: cbus_rdata[7:0] <= csr_rw[0];
           1: cbus_rdata[7:0] <= csr_rw[1];
-          2: cbus_rdata[7:0] <= csr_ro;
-          3: cbus_rdata[0:0] <= csr_tw_resp;
+          2: cbus_rdata[7:0] <= csr_rw[2];
+          3: cbus_rdata[7:0] <= csr_rw[3];
+          4: cbus_rdata[7:0] <= csr_ro;
+          5: cbus_rdata[0:0] <= csr_tw_resp;
           default: cbus_rdata <= 0;
         endcase
       end

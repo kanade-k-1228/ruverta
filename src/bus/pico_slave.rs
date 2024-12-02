@@ -1,12 +1,17 @@
-use super::{Entry, MMap};
-use crate::{module::Module, util::clog2};
+use super::MemMap;
+use crate::{
+    module::Module,
+    stmt::{Case, Stmt},
+    util::range,
+};
 
 // ----------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-pub struct PicoSlave {
-    pub name: String,
-    mmap: MMap,
+struct PicoSlave {
+    _name: String,
+    clk: String,
+    rst: String,
 
     // Bus wire names
     ready: String,
@@ -18,17 +23,20 @@ pub struct PicoSlave {
 }
 
 impl PicoSlave {
-    pub fn new(name: impl ToString, mmap: MMap) -> Self {
-        let name: String = name.to_string();
+    fn new(name: Option<&str>, clk: impl ToString, rst: impl ToString) -> Self {
+        let name: String = name
+            .map(|n| format!("{}_", n.to_string()))
+            .unwrap_or(format!(""));
         Self {
-            name: name.clone(),
-            mmap,
-            ready: format!("{name}_ready"),
-            valid: format!("{name}_valid"),
-            addr: format!("{name}_addr"),
-            wstrb: format!("{name}_wstrb"),
-            wdata: format!("{name}_wdata"),
-            rdata: format!("{name}_rdata"),
+            _name: name.clone(),
+            clk: clk.to_string(),
+            rst: rst.to_string(),
+            ready: format!("{name}ready"),
+            valid: format!("{name}valid"),
+            addr: format!("{name}addr"),
+            wstrb: format!("{name}wstrb"),
+            wdata: format!("{name}wdata"),
+            rdata: format!("{name}rdata"),
         }
     }
 }
@@ -36,42 +44,71 @@ impl PicoSlave {
 impl Module {
     pub fn pico_slave(
         mut self,
-        clk: impl ToString + Clone,
-        rst: impl ToString + Clone,
-        bus: PicoSlave,
+        name: Option<&str>,
+        clk: impl ToString,
+        rst: impl ToString,
+        mem: MemMap,
     ) -> Self {
-        // Allocate Registors
-        let (aloc, size) = {
-            let mut addr = 0;
-            let mut aloc = vec![];
-            for entry in &bus.mmap.list {
-                for idx in 0..entry.len() {
-                    aloc.push(entry.allocate(addr, idx));
-                    addr += 1;
-                }
-            }
-            (aloc, addr)
-        };
-        let addr_width = clog2(size).unwrap_or(1);
+        assert!(mem.data_bit == 32, "Data bit width must be 32");
+        assert!(mem.addr_bit <= 32, "Addr bit width must be <= 32");
+
+        let bus = PicoSlave::new(name, clk, rst);
+
+        // Regs
+        self = self.define_regs(&mem);
 
         // IO Port
         self = self
-            .input(&bus.addr, addr_width)
-            .input(&bus.wdata, bus.mmap.data_width)
-            .input(&bus.wstrb, bus.mmap.data_width / 8)
-            .output(&bus.rdata, bus.mmap.data_width);
+            .input(&bus.valid, 1)
+            .input(&bus.ready, 1)
+            .input(&bus.wstrb, mem.data_bit / 8)
+            .input(&bus.addr, mem.addr_bit)
+            .input(&bus.wdata, mem.data_bit)
+            .output(&bus.rdata, mem.data_bit);
 
-        // Regs
-        for entry in &bus.mmap.list {
-            self = match entry {
-                Entry::ReadWrite { name, bit, len } => self.logic(name, *bit, *len),
-                Entry::ReadOnly { name, bit, len } => self.logic(name, *bit, *len),
-                Entry::Trigger { name } => {
-                    self.logic(&format!("{name}_trig"), 1, 1)
-                        .logic(&format!("{name}_resp"), 1, 1)
+        // Write Logic
+        let init = {
+            let mut stmt = Stmt::begin();
+            for entry in &mem.map {
+                if let Some(name) = &entry.write {
+                    stmt = stmt.assign(&name, "0");
                 }
-            };
-        }
+            }
+            stmt.end()
+        };
+        let case = {
+            let mut cases = Case::new(&bus.addr);
+            for entry in &mem.map {
+                if let Some(name) = &entry.write {
+                    cases = cases.case(
+                        &format!("{}", entry.addr),
+                        Stmt::assign(name, &format!("{}{}", bus.wdata, range(entry.bit, 0))),
+                    );
+                }
+            }
+            cases.default(Stmt::empty())
+        };
+        self = self.sync_ff(
+            bus.clk.clone(),
+            bus.rst.clone(),
+            init,
+            Stmt::begin().case(case).end(),
+        );
+
+        // Read Logic
+        let case = {
+            let mut cases = Case::new(&bus.addr);
+            for entry in &mem.map {
+                if let Some(name) = &entry.read {
+                    cases = cases.case(
+                        &format!("{}", entry.addr),
+                        Stmt::assign(&format!("{}{}", bus.rdata, range(entry.bit, 0)), name),
+                    );
+                }
+            }
+            cases.default(Stmt::assign(&bus.rdata, "0"))
+        };
+        self = self.always_comb(Stmt::begin().case(case).end());
 
         self
     }

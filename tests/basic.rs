@@ -1,14 +1,12 @@
 use ruverta::{
+    mod_test,
     module::{Module, Sens},
     stmt::{Case, Stmt},
 };
-use std::{fs, path::PathBuf};
 
-const NAME: &str = "basic";
-
-#[test]
-fn test_basic() {
-    let m = Module::new(NAME)
+mod_test!(
+    basic,
+    Module::new("basic")
         .param("BIT", Some("8"))
         .input("clk", 1)
         .input("rstn", 1)
@@ -27,9 +25,5 @@ fn test_basic() {
                         .case("1", Stmt::empty()),
                 )
                 .end(),
-        );
-    let s = m.verilog().join("\n");
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push(format!("tests/verilog/{}.sv", NAME));
-    fs::write(path, s).unwrap();
-}
+        )
+);
