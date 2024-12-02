@@ -10,9 +10,9 @@
 
 SystemVerilog の簡単なサブセットのみをサポートしています。
 
-- 変数：`logic`のみ使用可能です。`reg` と `wire` はありません。
-- 組合回路：`always_comb`のみ使用可能です。 `assign`はありません。
-- 順序回路：`always_ff`のみ使用可能です。`always`はありません。
+- 変数：`logic`のみ生成可能です。`reg` と `wire` はありません。
+- 組合回路：`always_comb`のみ生成可能です。 `assign`はありません。
+- 順序回路：`always_ff`のみ生成可能です。`always`はありません。
 
 **目次**
 

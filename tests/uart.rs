@@ -21,9 +21,9 @@ mod_test!(
             "clk",
             "rstn",
             Stmt::begin()
-                .add(Stmt::assign("buf", "0"))
+                .add(Stmt::assign("buffer", "0"))
                 .add(Stmt::assign("cnt", "0"))
                 .end(),
-            Stmt::begin().add(Stmt::assign("buf", "a")).end(),
+            Stmt::begin().add(Stmt::assign("buffer", "a")).end(),
         )
 );
