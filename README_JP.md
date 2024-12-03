@@ -37,14 +37,7 @@ SystemVerilog の簡単なサブセットのみをサポートしています。
 ## インストール
 
 ```
-$ cargo add --git "https://github.com/kanade-k-1228/ruverta.git"
-```
-
-or
-
-```
-[dependencies]
-ruverta = { git = "https://github.com/kanade-k-1228/ruverta.git" }
+$ cargo add ruverta
 ```
 
 ## 基本 API
