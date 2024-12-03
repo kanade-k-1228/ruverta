@@ -8,7 +8,7 @@ use crate::{
 // ----------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-struct PicoSlave {
+struct Pico {
     _name: String,
     clk: String,
     rst: String,
@@ -22,21 +22,19 @@ struct PicoSlave {
     rdata: String,
 }
 
-impl PicoSlave {
-    fn new(name: Option<&str>, clk: impl ToString, rst: impl ToString) -> Self {
-        let name: String = name
-            .map(|n| format!("{}_", n.to_string()))
-            .unwrap_or(format!(""));
+impl Pico {
+    fn new(name: impl ToString, clk: impl ToString, rst: impl ToString) -> Self {
+        let name = name.to_string();
         Self {
             _name: name.clone(),
             clk: clk.to_string(),
             rst: rst.to_string(),
-            ready: format!("{name}ready"),
-            valid: format!("{name}valid"),
-            addr: format!("{name}addr"),
-            wstrb: format!("{name}wstrb"),
-            wdata: format!("{name}wdata"),
-            rdata: format!("{name}rdata"),
+            ready: format!("{name}_ready"),
+            valid: format!("{name}_valid"),
+            addr: format!("{name}_addr"),
+            wstrb: format!("{name}_wstrb"),
+            wdata: format!("{name}_wdata"),
+            rdata: format!("{name}_rdata"),
         }
     }
 }
@@ -44,7 +42,7 @@ impl PicoSlave {
 impl Module {
     pub fn pico_slave(
         mut self,
-        name: Option<&str>,
+        name: impl ToString,
         clk: impl ToString,
         rst: impl ToString,
         mem: MemMap,
@@ -52,7 +50,7 @@ impl Module {
         assert!(mem.data_bit == 32, "Data bit width must be 32");
         assert!(mem.addr_bit <= 32, "Addr bit width must be <= 32");
 
-        let bus = PicoSlave::new(name, clk, rst);
+        let bus = Pico::new(name, clk, rst);
 
         // Regs
         self = self.define_regs(&mem);
@@ -110,6 +108,16 @@ impl Module {
         };
         self = self.always_comb(Stmt::begin().case(case).end());
 
+        self
+    }
+
+    pub fn pico_master(
+        mut self,
+        name: impl ToString,
+        clk: impl ToString,
+        rst: impl ToString,
+        mem: MemMap,
+    ) -> Self {
         self
     }
 }

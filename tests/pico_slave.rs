@@ -1,12 +1,13 @@
 use ruverta::{bus::RegList, mod_test, module::Module};
 
+#[cfg(feature = "unstable")]
 mod_test!(
     pico_slave,
     Module::new("pico_slave")
         .input("clk", 1)
         .input("rstn", 1)
         .pico_slave(
-            None,
+            "mem",
             "clk",
             "rstn",
             RegList::new()

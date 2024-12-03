@@ -1,6 +1,7 @@
 pub mod axi_lite;
 mod common;
-pub mod pico_slave;
+#[cfg(feature = "unstable")]
+pub mod pico;
 
 // ----------------------------------------------------------------------------
 

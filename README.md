@@ -8,13 +8,18 @@ English | [日本語](README_JP.md)
 
 </div>
 
-Supports only a simple subset of SystemVerilog.
+## What is ruverta for? <!-- omit in toc -->
 
-- Variables: Only `logic` is available. No `reg` or `wire`.
-- Combinational circuits: Only `always_comb` is available. No `assign`.
-- Sequential circuits: Only `always_ff` is available. No `always`.
+Ruverta is a library for easily creating IP generators in Rust.
 
-**Table of Contents**
+- **Flexible Generation** : The abstraction of modules using SystemVerilog parameters is not very flexible. Create highly flexible IPs using Rust + Ruverta.
+- **Minimalist Syntax** : Supports only simple subset of SystemVerilog which is enough for most cases.
+  - Variables: Only `logic` is available. No `reg` or `wire`.
+  - Combinational circuits: Only `always_comb` is available. No `assign`.
+  - Sequential circuits: Only `always_ff` is available. No `always`.
+- **Human Friendly** : Builder API is designed to be easy to use. Additionally, the generated SystemVerilog code is readable. You don't have to struggle with a bunch of meaningless variable names.
+
+## Table of Contents <!-- omit in toc -->
 
 - [Installation](#installation)
 - [Basic API](#basic-api)
@@ -125,8 +130,6 @@ endmodule;
 
 Generate Verilog with `.verilog()`. Since it returns `Vec<String>`, use `.join("\n")` to concatenate.
 
-> The API design is quite rough, so feel free to request anything~
-
 ## Extended API
 
 Extend the builder methods of Module to easily construct various circuits.
@@ -224,7 +227,7 @@ Module::new(name)
 |              | Rust                                         | Verilog                                              | Test                                                       |
 | ------------ | -------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- |
 | AXILiteSlave | [axi_lite_slave.rs](tests/axi_lite_slave.rs) | [axi_lite_slave.sv](tests/verilog/axi_lite_slave.sv) | [axi_lite_slave_tb.sv](tests/verilog/axi_lite_slave_tb.sv) |
-| PicoSlave    |                                              |                                                      |                                                            |
+| PicoSlave    | [pico_slave.rs](tests/pico_slave.rs)         |                                                      |                                                            |
 
 ```rust
 Module::new(name)
