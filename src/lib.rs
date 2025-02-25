@@ -7,4 +7,4 @@ pub mod macros;
 pub mod module;
 pub mod stmt;
 pub mod stream;
-mod util;
+pub mod util;

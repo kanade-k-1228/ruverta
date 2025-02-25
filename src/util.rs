@@ -7,7 +7,7 @@ pub fn clog2(n: usize) -> Option<usize> {
     }
 }
 
-pub fn sel(n: usize, size: usize) -> String {
+pub(crate) fn sel(n: usize, size: usize) -> String {
     if size == 1 {
         format!("")
     } else {
@@ -15,7 +15,7 @@ pub fn sel(n: usize, size: usize) -> String {
     }
 }
 
-pub fn range(begin: usize, end: usize) -> String {
+pub(crate) fn range(begin: usize, end: usize) -> String {
     if begin == 0 {
         format!("")
     } else {
