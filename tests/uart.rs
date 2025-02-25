@@ -2,7 +2,7 @@ use ruverta::{bus::RegList, mod_test, module::Module, stmt::Stmt};
 
 mod_test!(
     uart,
-    Module::new("uart")
+    Module::new("uart", "clk", "rstn")
         .inout("clk", 1)
         .input("rstn", 1)
         .output("tx", 1)
@@ -18,8 +18,6 @@ mod_test!(
                 .allocate_greedy(32, 8),
         )
         .async_ff(
-            "clk",
-            "rstn",
             Stmt::begin()
                 .add(Stmt::assign("buffer", "0"))
                 .add(Stmt::assign("cnt", "0"))

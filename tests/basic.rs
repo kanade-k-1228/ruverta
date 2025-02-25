@@ -6,7 +6,7 @@ use ruverta::{
 
 mod_test!(
     basic,
-    Module::new("basic")
+    Module::new("basic", "clk", "rstn")
         .param("BIT", Some("8"))
         .input("clk", 1)
         .input("rstn", 1)

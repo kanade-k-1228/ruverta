@@ -3,7 +3,7 @@ use ruverta::{bus::RegList, mod_test, module::Module};
 #[cfg(feature = "unstable")]
 mod_test!(
     pico_slave,
-    Module::new("pico_slave")
+    Module::new("pico_slave", "clk", "rstn")
         .input("clk", 1)
         .input("rstn", 1)
         .pico_slave(

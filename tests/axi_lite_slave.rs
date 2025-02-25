@@ -2,7 +2,7 @@ use ruverta::{bus::RegList, mod_test, module::Module};
 
 mod_test!(
     axi_lite_slave,
-    Module::new("axi_lite_slave")
+    Module::new("axi_lite_slave", "clk", "rstn")
         .input("clk", 1)
         .input("rstn", 1)
         .axi_lite_slave(

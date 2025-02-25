@@ -88,8 +88,6 @@ impl Module {
             self = self.lparam(&state.name, format!("{i}"));
         }
         self = self.sync_ff(
-            &fsm.clk,
-            &fsm.rst,
             Stmt::assign(&fsm.state_var, "0"),
             Stmt::begin()
                 .case({

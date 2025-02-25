@@ -86,12 +86,7 @@ impl Module {
             }
             cases.default(Stmt::empty())
         };
-        self = self.sync_ff(
-            bus.clk.clone(),
-            bus.rst.clone(),
-            init,
-            Stmt::begin().case(case).end(),
-        );
+        self = self.sync_ff(init, Stmt::begin().case(case).end());
 
         // Read Logic
         let case = {

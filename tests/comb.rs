@@ -2,7 +2,7 @@ use ruverta::{comb::Comb, mod_test, module::Module};
 
 mod_test!(
     comb,
-    Module::new("comb")
+    Module::new("comb", "clk", "rstn")
         .input("clk", 1)
         .input("rstn", 1)
         .input("in0", 1)

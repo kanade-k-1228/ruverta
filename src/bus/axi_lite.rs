@@ -127,8 +127,6 @@ impl Module {
             cases.default(Stmt::empty())
         };
         self = self.sync_ff(
-            bus.clk.clone(),
-            bus.rst.clone(),
             init,
             Stmt::begin()
                 .r#if(
@@ -152,8 +150,6 @@ impl Module {
             cases.default(Stmt::assign(&bus.rdata, "0"))
         };
         self = self.sync_ff(
-            bus.clk.clone(),
-            bus.rst.clone(),
             Stmt::assign(&bus.rdata, "0"),
             Stmt::begin()
                 .r#if(&bus.arvalid, Stmt::begin().case(case).end())
@@ -162,8 +158,6 @@ impl Module {
 
         // AXI Lite Protocol
         self = self.sync_ff(
-            bus.clk,
-            bus.rst,
             Stmt::begin()
                 .assign(&bus.awready, "0")
                 .assign(&bus.wready, "0")

@@ -8,15 +8,19 @@ pub struct Module {
     params: Vec<Param>,
     ports: Vec<Port>,
     blocks: Vec<Block>,
+    pub(crate) clock: String, // (name, pos/neg)
+    pub(crate) reset: String, // (name, pos/neg, sync/async)
 }
 
 impl Module {
-    pub fn new(name: impl ToString) -> Self {
+    pub fn new(name: impl ToString, clock: impl ToString, reset: impl ToString) -> Self {
         Self {
             name: name.to_string(),
             params: vec![],
             ports: vec![],
             blocks: vec![],
+            clock: clock.to_string(),
+            reset: reset.to_string(),
         }
     }
     pub fn input(mut self, name: impl ToString, width: usize) -> Self {
