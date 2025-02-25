@@ -3,7 +3,7 @@ use ruverta::{fsm::FSM, mod_test, module::Module};
 mod_test!(fsm, {
     const INIT: &str = "INIT";
     const RUNNING: &str = "RUNNING";
-    let fsm = FSM::new("state", "clk", "rstn")
+    let fsm = FSM::new("state")
         .state(INIT)
         .jump("in0 == 1", RUNNING)
         .r#else(INIT)

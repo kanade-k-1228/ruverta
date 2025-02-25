@@ -9,8 +9,6 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct FSM {
     state_var: String,
-    clk: String,
-    rst: String,
     states: Vec<State>,
 }
 
@@ -28,11 +26,9 @@ struct Trans {
 }
 
 impl FSM {
-    pub fn new(state_var: impl ToString, clk: impl ToString, rst: impl ToString) -> Self {
+    pub fn new(state_var: impl ToString) -> Self {
         FSM {
             state_var: state_var.to_string(),
-            clk: clk.to_string(),
-            rst: rst.to_string(),
             states: Vec::new(),
         }
     }
