@@ -4,13 +4,13 @@
 
 **Rust to Verilog: Very Simple Verilog Builder**
 
-English | [日本語](README_JP.md)
+English | [日本語](README.ja.md)
 
 </div>
 
 ## What is ruverta for? <!-- omit in toc -->
 
-Ruverta is a library for easily creating IP generators in Rust.
+Ruverta (/rʊˈvɛrtə/) is a library for easily creating IP generators in Rust.
 
 - **Flexible Generation** : The abstraction of modules using SystemVerilog parameters is not very flexible. Create highly flexible IPs using Rust + Ruverta.
 - **Minimalist Syntax** : Supports only simple subset of SystemVerilog which is enough for most cases.
@@ -21,7 +21,8 @@ Ruverta is a library for easily creating IP generators in Rust.
 
 ## Table of Contents <!-- omit in toc -->
 
-- [Installation](#installation)
+- [Crash Course: Blink](#crash-course-blink)
+- [Features](#features)
 - [Basic API](#basic-api)
   - [Input/Output Ports](#inputoutput-ports)
   - [Parameters](#parameters)
@@ -39,11 +40,65 @@ Ruverta is a library for easily creating IP generators in Rust.
 - [Bus API](#bus-api)
 - [Test](#test)
 
-## Installation
+## Crash Course: Blink
 
+1. Init rust project and add ruverta
+
+```bash
+$ cargo init
+$ cargo add ruverta -F module
 ```
-$ cargo add ruverta
+
+2. Write code
+
+Parameter "div"
+
+```rust
+use ruverta::{Module, Stmt};
+fn main(){
+  let div: usize = 24;
+  let module = Module::new("blink", "clk", "rstn")
+        .logic("cnt", div, 1)
+        .sync_ff(Stmt::assign("cnt", "0"), Stmt::assign("cnt", "cnt + 1"))
+        .input("clk", 1)
+        .input("rst", 1)
+        .output("led", 1)
+        .always_comb(Stmt::assign("led", format!("cnt[{}]", div - 1)))
+  println!("{}", m.verilog().join("\n"));
+}
 ```
+
+3. Generate Verilog
+
+```bash
+$ cargo run > blink.sv
+```
+
+```systemverilog
+module blink (
+    input  logic clk,
+    input  logic rst,
+    output logic led
+);
+  logic [23:0] cnt;
+  always_ff @(posedge clk) begin
+    if (!rstn) cnt <= 0;
+    else cnt <= cnt + 1;
+  end
+  always_comb led = cnt[23];
+endmodule
+```
+
+## Features
+
+Ruverta is aimed at generating branch modules.
+
+![](./doc/mod.drawio.svg)
+
+- core: Only wrapper of system verilog.
+- atom: Support API to generate single clock domain module.
+- cros: Add support to generate cross clock domain module.
+- top: Support API to generate top module. Multiple clocks and resets can be specified.
 
 ## Basic API
 

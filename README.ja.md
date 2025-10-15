@@ -10,7 +10,7 @@
 
 ## Ruverta とは <!-- omit in toc -->
 
-Ruverta は Rust で IP ジェネレータを簡単に作るためのライブラリです。
+Ruverta (/rʊˈvɛrtə/) は Rust で IP ジェネレータを簡単に作るためのライブラリです。
 
 - **柔軟性が高い** : SystemVerilog のパラメタを用いたモジュールの抽象化は柔軟性が低いです。Rust + Ruverta を使っては柔軟性の高い IP を作成しましょう。
 - **最小限の文法** : SystemVerilog のシンプルなサブセットのみをサポートしており、ほとんどの場合に十分です。
