@@ -34,7 +34,7 @@ Ruverta (/rʊˈvɛrtə/) is a library for easily creating IP generators in Rust.
 - [Extended API](#extended-api)
   - [DFF](#dff)
   - [Comb](#comb)
-  - [FSM](#fsm)
+  - [StateMachine](#statemachine)
   - [Stream](#stream)
   - [FIFO](#fifo)
 - [Bus API](#bus-api)
@@ -54,17 +54,17 @@ $ cargo add ruverta -F module
 Parameter "div"
 
 ```rust
-use ruverta::{Module, Stmt};
+use ruverta::{ext::DFF, module::Module, stmt::Stmt};
 fn main(){
   let div: usize = 24;
   let module = Module::new("blink", "clk", "rstn")
         .logic("cnt", div, 1)
-        .sync_ff(Stmt::assign("cnt", "0"), Stmt::assign("cnt", "cnt + 1"))
+        .add(DFF::sync(Stmt::assign("cnt", "0"), Stmt::assign("cnt", "cnt + 1")))
         .input("clk", 1)
         .input("rst", 1)
         .output("led", 1)
-        .always_comb(Stmt::assign("led", format!("cnt[{}]", div - 1)))
-  println!("{}", m.verilog().join("\n"));
+        .always_comb(Stmt::assign("led", format!("cnt[{}]", div - 1)));
+  println!("{}", module.verilog().join("\n"));
 }
 ```
 
@@ -105,9 +105,9 @@ Ruverta is aimed at generating branch modules.
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
 ```rust
-use ruverta::{Module, Sens, Stmt};
+use ruverta::{module::{Module, Sens}, stmt::Stmt};
 fn test_module() {
-    let m = Module::new("test_module")
+    let m = Module::new("test_module", "clk", "rstn")
         .param("BIT", Some("8"))
         .input("clk", 1)
         .input("rstn", 1)
@@ -193,7 +193,7 @@ Extend the builder methods of Module to easily construct various circuits.
 | ----------------------------- | -------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- |
 | [DFF](#dff)                   | [dff.sv](tests/dff.rs)                       | [dff.sv](tests/verilog/dff.sv)                       | [dff_tb.sv](tests/verilog/dff_tb.sv)                       |
 | [Comb](#comb)                 | [comb.rs](tests/comb.rs)                     | [comb.sv](tests/verilog/comb.sv)                     | [comb_tb.sv](tests/verilog/comb_tb.sv)                     |
-| [FSM](#fsm)                   | [fsm.rs](tests/fsm.rs)                       | [fsm.sv](tests/verilog/fsm.sv)                       | [fsm_tb.sv](tests/verilog/fsm_tb.sv)                       |
+| [StateMachine](#statemachine) | [state_machine.rs](tests/state_machine.rs)   | [state_machine.sv](tests/verilog/state_machine.sv)   | [state_machine_tb.sv](tests/verilog/state_machine_tb.sv)   |
 | [AXILiteSlave](#axiliteslave) | [axi_lite_slave.rs](tests/axi_lite_slave.rs) | [axi_lite_slave.sv](tests/verilog/axi_lite_slave.sv) | [axi_lite_slave_tb.sv](tests/verilog/axi_lite_slave_tb.sv) |
 | [PicoSlave](#picoslave)       |                                              |                                                      |                                                            |
 | [Stream](#stream)             | [stream.rs](tests/stream.rs)                 | [stream.sv](tests/verilog/stream.sv)                 |                                                            |
@@ -201,7 +201,7 @@ Extend the builder methods of Module to easily construct various circuits.
 
 ### DFF
 
-When implementing sequential circuits, it is recommended to use `sync_ff` / `async_ff` api instead of `always_ff`.
+When implementing sequential circuits, it is recommended to use the `DFF` extension instead of `always_ff`.
 
 DFF has several usage patterns depending on the clock and reset settings.
 
@@ -211,65 +211,77 @@ DFF has several usage patterns depending on the clock and reset settings.
 
 Currently, only the following patterns are supported.
 
-|            | clock edge | reset logic | reset timing |
-| ---------- | ---------- | ----------- | ------------ |
-| `sync_ff`  | posedge    | negative    | sync         |
-| `async_ff` | posedge    | negative    | async        |
+|              | clock edge | reset logic | reset timing |
+| ------------ | ---------- | ----------- | ------------ |
+| `DFF::sync`  | posedge    | negative    | sync         |
+| `DFF::async` | posedge    | negative    | async        |
+
+Clock and reset signals are taken from the module's default clock and reset.
 
 ```rust
-Module::new(name)
+use ruverta::{ext::DFF, module::Module, stmt::Stmt};
+
+Module::new("example", "clk", "rstn")
     .input("clk", 1)
     .input("rstn", 1)
     .input("in0", 8)
     .input("in1", 8)
     .output("out", 8)
-    .sync_ff(
-        "clk",
-        "rstn",
+    .add(DFF::sync(
         Stmt::begin().assign("out", "0").end(),
         Stmt::begin().assign("out", "in0 + in1").end(),
-    );
+    ));
 ```
 
 ### Comb
 
-When implementing combinational circuits, it is recommended to use `comb` instead of `always_comb`.
+When implementing combinational circuits, it is recommended to use the `Comb` extension instead of `always_comb`.
 
 Since it always requires a default, there are no omissions in case distinctions.
 
 ```rust
-Module::new(name)
+use ruverta::{ext::Comb, module::Module};
+
+Module::new("example", "clk", "rstn")
     .input("clk", 1)
     .input("rstn", 1)
-    .input("hoge", 1)
-    .comb(
+    .input("in0", 1)
+    .input("in1", 1)
+    .output("out0", 1)
+    .output("out1", 1)
+    .add(
         Comb::new()
             .input("in0")
             .input("in1")
             .output("out0")
             .output("out1")
-            .case("in0==0", "out0=0", "out1=0")
-            .default("0", "1"),
+            .case("in0==0", vec!["0", "1"])
+            .default(vec!["in0", "in1"]),
     );
 ```
 
-### FSM
+### StateMachine
 
 Construct a state machine with a single state variable.
 
 ```rust
-Module::new(name)
+use ruverta::{ext::StateMachine, module::Module};
+
+const INIT: &str = "INIT";
+const FUGA: &str = "FUGA";
+
+Module::new("example", "clk", "rstn")
     .input("clk", 1)
     .input("rstn", 1)
     .input("hoge", 1)
-    .sync_fsm(
-        FSM::new("init", "clk", "rstn")
-            .state("init")
-            .jump("hoge == 1", "fuga")
-            .r#else("init")
-            .state("fuga")
-            .jump("hoge == 0", "init")
-            .r#else("fuga"),
+    .add(
+        StateMachine::new("state")
+            .state(INIT)
+            .jump("hoge == 1", FUGA)
+            .r#else(INIT)
+            .state(FUGA)
+            .jump("hoge == 0", INIT)
+            .r#else(FUGA),
     );
 ```
 
@@ -285,20 +297,21 @@ Module::new(name)
 | PicoSlave    | [pico_slave.rs](tests/pico_slave.rs)         |                                                      |                                                            |
 
 ```rust
-Module::new(name)
+use ruverta::{bus::{AXILiteSlave, RegList}, module::Module};
+
+Module::new("example", "clk", "rstn")
   .input("clk", 1)
   .input("rstn", 1)
-  .axi_lite_slave(
+  .add(AXILiteSlave::new(
+    Some("cbus"),
     "clk",
     "rstn",
-    AXILiteSlave::new(
-      "cbus",
-      MMap::new(32, 32)
-        .read_write("csr_rw", 8, 2)
-        .read_only("csr_ro", 8, 1)
-        .trigger("csr_tw"),
-      ),
-  );
+    RegList::new()
+      .read_write("csr_rw", 8, 4)
+      .read_only("csr_ro", 8, 1)
+      .trigger("csr_tw")
+      .allocate_greedy(32, 8),
+  ));
 ```
 
 - AXI Lite Slave

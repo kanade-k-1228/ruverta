@@ -33,7 +33,7 @@ Ruverta (/rʊˈvɛrtə/) は Rust で IP ジェネレータを簡単に作るた
 - [拡張 API](#拡張-api)
   - [DFF](#dff)
   - [Comb](#comb)
-  - [FSM](#fsm)
+  - [StateMachine](#statemachine)
   - [Stream](#stream)
   - [FIFO](#fifo)
 - [Bus API](#bus-api)
@@ -52,9 +52,9 @@ $ cargo add ruverta
 <table><tr><th>Rust</th><th>SystemVerilog</th></tr><tr><td>
 
 ```rust
-use ruverta::{Module, Sens, Stmt};
+use ruverta::{module::{Module, Sens}, stmt::Stmt};
 fn test_module() {
-    let m = Module::new("test_module")
+    let m = Module::new("test_module", "clk", "rstn")
         .param("BIT", Some("8"))
         .input("clk", 1)
         .input("rstn", 1)
@@ -136,17 +136,17 @@ endmodule;
 
 Module のビルダメソッドを拡張して、さまざまな回路を簡単に構築できるようにします。
 
-|                   | Rust                         | Verilog                              | Test                                   |
-| ----------------- | ---------------------------- | ------------------------------------ | -------------------------------------- |
-| [DFF](#dff)       | [dff.sv](tests/dff.rs)       | [dff.sv](tests/verilog/dff.sv)       | [dff_tb.sv](tests/verilog/dff_tb.sv)   |
-| [Comb](#comb)     | [comb.rs](tests/comb.rs)     | [comb.sv](tests/verilog/comb.sv)     | [comb_tb.sv](tests/verilog/comb_tb.sv) |
-| [FSM](#fsm)       | [fsm.rs](tests/fsm.rs)       | [fsm.sv](tests/verilog/fsm.sv)       | [fsm_tb.sv](tests/verilog/fsm_tb.sv)   |
-| [Stream](#stream) | [stream.rs](tests/stream.rs) | [stream.sv](tests/verilog/stream.sv) |                                        |
-| [FIFO](#fifo)     | [fifo.rs](tests/fifo.rs)     | [fifo.sv](tests/verilog/fifo.sv)     |                                        |
+|                               | Rust                                       | Verilog                                            | Test                                                     |
+| ----------------------------- | ------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------- |
+| [DFF](#dff)                   | [dff.sv](tests/dff.rs)                     | [dff.sv](tests/verilog/dff.sv)                     | [dff_tb.sv](tests/verilog/dff_tb.sv)                     |
+| [Comb](#comb)                 | [comb.rs](tests/comb.rs)                   | [comb.sv](tests/verilog/comb.sv)                   | [comb_tb.sv](tests/verilog/comb_tb.sv)                   |
+| [StateMachine](#statemachine) | [state_machine.rs](tests/state_machine.rs) | [state_machine.sv](tests/verilog/state_machine.sv) | [state_machine_tb.sv](tests/verilog/state_machine_tb.sv) |
+| [Stream](#stream)             | [stream.rs](tests/stream.rs)               | [stream.sv](tests/verilog/stream.sv)               |                                                          |
+| [FIFO](#fifo)                 | [fifo.rs](tests/fifo.rs)                   | [fifo.sv](tests/verilog/fifo.sv)                   |                                                          |
 
 ### DFF
 
-順序回路を実装する場合 `always_ff` ではなく、`sync_ff` / `async_ff` を使うことを推奨します。
+順序回路を実装する場合 `always_ff` ではなく、`DFF` 拡張を使うことを推奨します。
 
 DFF には、クロックとリセットの設定によって何パターンかの使い方があります。
 
@@ -156,65 +156,77 @@ DFF には、クロックとリセットの設定によって何パターンか�
 
 いまのところ、次のパターンのみに対応しています。
 
-|            | clock edge | reset logic | reset timing |
-| ---------- | ---------- | ----------- | ------------ |
-| `sync_ff`  | posedge    | negative    | sync         |
-| `async_ff` | posedge    | negative    | async        |
+|              | clock edge | reset logic | reset timing |
+| ------------ | ---------- | ----------- | ------------ |
+| `DFF::sync`  | posedge    | negative    | sync         |
+| `DFF::async` | posedge    | negative    | async        |
+
+クロックとリセット信号はモジュールのデフォルトクロック・リセットから取得されます。
 
 ```rust
-Module::new(name)
+use ruverta::{ext::DFF, module::Module, stmt::Stmt};
+
+Module::new("example", "clk", "rstn")
     .input("clk", 1)
     .input("rstn", 1)
     .input("in0", 8)
     .input("in1", 8)
     .output("out", 8)
-    .sync_ff(
-        "clk",
-        "rstn",
+    .add(DFF::sync(
         Stmt::begin().assign("out", "0").end(),
         Stmt::begin().assign("out", "in0 + in1").end(),
-    );
+    ));
 ```
 
 ### Comb
 
-組合回路を実装する場合 `always_comb` ではなく、`comb` を使うことを推奨します。
+組合回路を実装する場合 `always_comb` ではなく、`Comb` 拡張を使うことを推奨します。
 
 default を必ず要求するため、場合分けの漏れがありません。
 
 ```rust
-Module::new(name)
+use ruverta::{ext::Comb, module::Module};
+
+Module::new("example", "clk", "rstn")
     .input("clk", 1)
     .input("rstn", 1)
-    .input("hoge", 1)
-    .comb(
+    .input("in0", 1)
+    .input("in1", 1)
+    .output("out0", 1)
+    .output("out1", 1)
+    .add(
         Comb::new()
             .input("in0")
             .input("in1")
             .output("out0")
             .output("out1")
-            .case("in0==0", "out0=0", "out1=0")
-            .default("0", "1"),
+            .case("in0==0", vec!["0", "1"])
+            .default(vec!["in0", "in1"]),
     );
 ```
 
-### FSM
+### StateMachine
 
 状態変数が１つのステートマシンを構築します。
 
 ```rust
-Module::new(name)
+use ruverta::{ext::StateMachine, module::Module};
+
+const INIT: &str = "INIT";
+const FUGA: &str = "FUGA";
+
+Module::new("example", "clk", "rstn")
     .input("clk", 1)
     .input("rstn", 1)
     .input("hoge", 1)
-    .sync_fsm(
-        FSM::new("init", "clk", "rstn")
-            .state("init")
-            .jump("hoge == 1", "fuga")
-            .r#else("init")
-            .state("fuga")
-            .jump("hoge == 0", "init")
-            .r#else("fuga"),
+    .add(
+        StateMachine::new("state")
+            .state(INIT)
+            .jump("hoge == 1", FUGA)
+            .r#else(INIT)
+            .state(FUGA)
+            .jump("hoge == 0", INIT)
+            .r#else(FUGA),
     );
 ```
 
@@ -230,20 +242,21 @@ Module::new(name)
 | PicoSlave    |                                              |                                                      |                                                            |
 
 ```rust
-Module::new(name)
+use ruverta::{bus::{AXILiteSlave, RegList}, module::Module};
+
+Module::new("example", "clk", "rstn")
   .input("clk", 1)
   .input("rstn", 1)
-  .axi_lite_slave(
+  .add(AXILiteSlave::new(
+    Some("cbus"),
     "clk",
     "rstn",
-    AXILiteSlave::new(
-      "cbus",
-      MMap::new(32, 32)
-        .read_write("csr_rw", 8, 2)
-        .read_only("csr_ro", 8, 1)
-        .trigger("csr_tw"),
-      ),
-  );
+    RegList::new()
+      .read_write("csr_rw", 8, 4)
+      .read_only("csr_ro", 8, 1)
+      .trigger("csr_tw")
+      .allocate_greedy(32, 8),
+  ));
 ```
 
 - AXI Lite Slave

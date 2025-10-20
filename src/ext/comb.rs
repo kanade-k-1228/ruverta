@@ -1,4 +1,7 @@
-use crate::{module::Module, stmt::Stmt};
+use crate::{
+    module::{Extension, Module},
+    stmt::Stmt,
+};
 
 #[derive(Debug, Clone)]
 pub struct Comb {
@@ -69,14 +72,14 @@ impl Comb {
     }
 }
 
-impl Module {
-    pub fn comb(mut self, comb: Comb) -> Self {
-        self = self.always_comb({
+impl Extension for Comb {
+    fn add(self, mut module: Module) -> Module {
+        module = module.always_comb({
             let mut stmt = Stmt::begin();
-            for (cond, outs) in &comb.cases {
+            for (cond, outs) in &self.cases {
                 stmt = stmt.r#if(&cond, {
                     let mut stmt = Stmt::begin();
-                    for (var, out) in outs.iter().zip(&comb.outputs) {
+                    for (var, out) in outs.iter().zip(&self.outputs) {
                         stmt = stmt.assign(&out, var);
                     }
                     stmt.end()
@@ -84,13 +87,13 @@ impl Module {
             }
             stmt = stmt.r#else({
                 let mut stmt = Stmt::begin();
-                for (var, out) in comb.default.iter().zip(&comb.outputs) {
+                for (var, out) in self.default.iter().zip(&self.outputs) {
                     stmt = stmt.assign(&out, var);
                 }
                 stmt.end()
             });
             stmt.end()
         });
-        self
+        module
     }
 }

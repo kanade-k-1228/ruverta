@@ -1,4 +1,7 @@
-use crate::{module::Module, util::clog2};
+use crate::{
+    module::{Extension, Module},
+    util::clog2,
+};
 
 #[derive(Debug, Clone)]
 pub struct FIFO {
@@ -26,12 +29,11 @@ impl FIFO {
     }
 }
 
-impl Module {
-    pub fn fifo(mut self, fifo: FIFO) -> Self {
-        self = self
-            .logic(&fifo.buf, fifo.bit, fifo.len)
-            .logic(&fifo.rptr, fifo.addr_width, 1)
-            .logic(&fifo.wptr, fifo.addr_width, 1);
-        self
+impl Extension for FIFO {
+    fn add(self, module: Module) -> Module {
+        module
+            .logic(&self.buf, self.bit, self.len)
+            .logic(&self.rptr, self.addr_width, 1)
+            .logic(&self.wptr, self.addr_width, 1)
     }
 }

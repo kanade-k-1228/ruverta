@@ -1,5 +1,9 @@
 use crate::stmt::Stmt;
 
+pub trait Extension {
+    fn add(self, module: Module) -> Module;
+}
+
 // ----------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -65,6 +69,10 @@ impl Module {
         self.blocks
             .push(Block::AlwaysFF(AlwaysFF::new(edges, stmt)));
         self
+    }
+
+    pub fn add<E: Extension>(self, ext: E) -> Self {
+        ext.add(self)
     }
 }
 

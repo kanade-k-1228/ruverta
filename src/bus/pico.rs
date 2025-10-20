@@ -1,6 +1,7 @@
 use super::MemMap;
 use crate::{
-    module::Module,
+    ext::DFF,
+    module::{Extension, Module},
     stmt::{Case, Stmt},
     util::range,
 };
@@ -8,27 +9,29 @@ use crate::{
 // ----------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-struct Pico {
-    _name: String,
+pub struct PicoSlave {
+    name: String,
     clk: String,
     rst: String,
-
-    // Bus wire names
-    ready: String,
-    valid: String,
-    addr: String,
-    wstrb: String,
-    wdata: String,
-    rdata: String,
+    mem: MemMap,
 }
 
-impl Pico {
-    fn new(name: impl ToString, clk: impl ToString, rst: impl ToString) -> Self {
-        let name = name.to_string();
+impl PicoSlave {
+    pub fn new(name: impl ToString, clk: impl ToString, rst: impl ToString, mem: MemMap) -> Self {
+        assert!(mem.data_bit == 32, "Data bit width must be 32");
+        assert!(mem.addr_bit <= 32, "Addr bit width must be <= 32");
+
         Self {
-            _name: name.clone(),
+            name: name.to_string(),
             clk: clk.to_string(),
             rst: rst.to_string(),
+            mem,
+        }
+    }
+
+    fn signal_names(&self) -> SignalNames {
+        let name = &self.name;
+        SignalNames {
             ready: format!("{name}_ready"),
             valid: format!("{name}_valid"),
             addr: format!("{name}_addr"),
@@ -39,24 +42,26 @@ impl Pico {
     }
 }
 
-impl Module {
-    pub fn pico_slave(
-        mut self,
-        name: impl ToString,
-        clk: impl ToString,
-        rst: impl ToString,
-        mem: MemMap,
-    ) -> Self {
-        assert!(mem.data_bit == 32, "Data bit width must be 32");
-        assert!(mem.addr_bit <= 32, "Addr bit width must be <= 32");
+#[derive(Debug, Clone)]
+struct SignalNames {
+    ready: String,
+    valid: String,
+    addr: String,
+    wstrb: String,
+    wdata: String,
+    rdata: String,
+}
 
-        let bus = Pico::new(name, clk, rst);
+impl Extension for PicoSlave {
+    fn add(self, mut module: Module) -> Module {
+        let bus = self.signal_names();
+        let mem = &self.mem;
 
         // Regs
-        self = self.define_regs(&mem);
+        module = module.define_regs(mem);
 
         // IO Port
-        self = self
+        module = module
             .input(&bus.valid, 1)
             .input(&bus.ready, 1)
             .input(&bus.wstrb, mem.data_bit / 8)
@@ -86,7 +91,7 @@ impl Module {
             }
             cases.default(Stmt::empty())
         };
-        self = self.sync_ff(init, Stmt::begin().case(case).end());
+        module = module.add(DFF::sync(init, Stmt::begin().case(case).end()));
 
         // Read Logic
         let case = {
@@ -101,18 +106,8 @@ impl Module {
             }
             cases.default(Stmt::assign(&bus.rdata, "0"))
         };
-        self = self.always_comb(Stmt::begin().case(case).end());
+        module = module.always_comb(Stmt::begin().case(case).end());
 
-        self
-    }
-
-    pub fn pico_master(
-        mut self,
-        name: impl ToString,
-        clk: impl ToString,
-        rst: impl ToString,
-        mem: MemMap,
-    ) -> Self {
-        self
+        module
     }
 }

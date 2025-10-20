@@ -1,6 +1,7 @@
 use super::MemMap;
 use crate::{
-    module::Module,
+    ext::DFF,
+    module::{Extension, Module},
     stmt::{Case, Stmt},
     util::range,
 };
@@ -8,84 +9,82 @@ use crate::{
 // ----------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-struct AXILite {
-    _name: String,
+pub struct AXILiteSlave {
+    name: Option<String>,
     clk: String,
     rst: String,
+    mem: MemMap,
+}
 
-    // Write Addr
+impl AXILiteSlave {
+    pub fn new(name: Option<&str>, clk: impl ToString, rst: impl ToString, mem: MemMap) -> Self {
+        Self {
+            name: name.map(|s| s.to_string()),
+            clk: clk.to_string(),
+            rst: rst.to_string(),
+            mem,
+        }
+    }
+
+    fn signal_names(&self) -> SignalNames {
+        let prefix = self
+            .name
+            .as_ref()
+            .map(|n| format!("{}_", n))
+            .unwrap_or_default();
+        SignalNames {
+            awaddr: format!("{prefix}awaddr"),
+            awvalid: format!("{prefix}awvalid"),
+            awready: format!("{prefix}awready"),
+            wdata: format!("{prefix}wdata"),
+            wstrb: format!("{prefix}wstrb"),
+            wvalid: format!("{prefix}wvalid"),
+            wready: format!("{prefix}wready"),
+            bresp: format!("{prefix}bresp"),
+            bvalid: format!("{prefix}bvalid"),
+            bready: format!("{prefix}bready"),
+            araddr: format!("{prefix}araddr"),
+            arvalid: format!("{prefix}arvalid"),
+            arready: format!("{prefix}arready"),
+            rdata: format!("{prefix}rdata"),
+            rresp: format!("{prefix}rresp"),
+            rvalid: format!("{prefix}rvalid"),
+            rready: format!("{prefix}rready"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct SignalNames {
     awaddr: String,
     awvalid: String,
     awready: String,
-
-    // Write Data
     wdata: String,
     wstrb: String,
     wvalid: String,
     wready: String,
-
-    // Write Response
     bresp: String,
     bvalid: String,
     bready: String,
-
-    // Read Addr
     araddr: String,
     arvalid: String,
     arready: String,
-
-    // Read Data
     rdata: String,
     rresp: String,
     rvalid: String,
     rready: String,
 }
 
-impl AXILite {
-    fn new(name: Option<&str>, clk: impl ToString, rst: impl ToString) -> Self {
-        let name: String = name
-            .map(|n| format!("{}_", n.to_string()))
-            .unwrap_or(format!(""));
-        Self {
-            _name: name.clone(),
-            clk: clk.to_string(),
-            rst: rst.to_string(),
-            awaddr: format!("{name}awaddr"),
-            awvalid: format!("{name}awvalid"),
-            awready: format!("{name}awready"),
-            wdata: format!("{name}wdata"),
-            wstrb: format!("{name}wstrb"),
-            wvalid: format!("{name}wvalid"),
-            wready: format!("{name}wready"),
-            bresp: format!("{name}bresp"),
-            bvalid: format!("{name}bvalid"),
-            bready: format!("{name}bready"),
-            araddr: format!("{name}araddr"),
-            arvalid: format!("{name}arvalid"),
-            arready: format!("{name}arready"),
-            rdata: format!("{name}rdata"),
-            rresp: format!("{name}rresp"),
-            rvalid: format!("{name}rvalid"),
-            rready: format!("{name}rready"),
-        }
-    }
-}
-
-impl Module {
-    pub fn axi_lite_slave(
-        mut self,
-        name: Option<&str>,
-        clk: impl ToString,
-        rst: impl ToString,
-        mem: MemMap,
-    ) -> Self {
-        let bus = AXILite::new(name, clk, rst);
+impl Extension for AXILiteSlave {
+    fn add(self, mut module: Module) -> Module {
+        let bus = self.signal_names();
+        let mem = &self.mem;
 
         // Regs
-        self = self.define_regs(&mem);
+        module = module.define_regs(mem);
 
         // IO Port
-        self = self
+        module = module
             .input(&bus.awaddr, mem.addr_bit)
             .input(&bus.awvalid, 1)
             .output(&bus.awready, 1)
@@ -126,7 +125,7 @@ impl Module {
             }
             cases.default(Stmt::empty())
         };
-        self = self.sync_ff(
+        module = module.add(DFF::sync(
             init,
             Stmt::begin()
                 .r#if(
@@ -134,7 +133,7 @@ impl Module {
                     Stmt::begin().case(case).end(),
                 )
                 .end(),
-        );
+        ));
 
         // Read Logic
         let case = {
@@ -149,15 +148,15 @@ impl Module {
             }
             cases.default(Stmt::assign(&bus.rdata, "0"))
         };
-        self = self.sync_ff(
+        module = module.add(DFF::sync(
             Stmt::assign(&bus.rdata, "0"),
             Stmt::begin()
                 .r#if(&bus.arvalid, Stmt::begin().case(case).end())
                 .end(),
-        );
+        ));
 
         // AXI Lite Protocol
-        self = self.sync_ff(
+        module = module.add(DFF::sync(
             Stmt::begin()
                 .assign(&bus.awready, "0")
                 .assign(&bus.wready, "0")
@@ -191,8 +190,8 @@ impl Module {
                     Stmt::assign(&bus.rvalid, "0"),
                 )
                 .end(),
-        );
+        ));
 
-        self
+        module
     }
 }

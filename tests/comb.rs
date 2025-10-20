@@ -1,4 +1,4 @@
-use ruverta::{comb::Comb, mod_test, module::Module};
+use ruverta::{ext::Comb, mod_test, module::Module};
 
 mod_test!(
     comb,
@@ -9,7 +9,7 @@ mod_test!(
         .input("in1", 1)
         .output("out0", 1)
         .output("out1", 1)
-        .comb(
+        .add(
             Comb::new()
                 .input("in0")
                 .input("in1")

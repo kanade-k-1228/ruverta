@@ -1,5 +1,5 @@
 use crate::{
-    module::Module,
+    module::{Extension, Module},
     stmt::{Case, Stmt},
     util::clog2,
 };
@@ -7,7 +7,7 @@ use crate::{
 // ----------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-pub struct FSM {
+pub struct StateMachine {
     state_var: String,
     states: Vec<State>,
 }
@@ -25,9 +25,9 @@ struct Trans {
     next: String,
 }
 
-impl FSM {
+impl StateMachine {
     pub fn new(state_var: impl ToString) -> Self {
-        FSM {
+        StateMachine {
             state_var: state_var.to_string(),
             states: Vec::new(),
         }
@@ -35,7 +35,7 @@ impl FSM {
 
     pub fn state(self, name: impl ToString) -> StateBuilder {
         StateBuilder {
-            fsm: self,
+            state_machine: self,
             name: name.to_string(),
             jumps: vec![],
         }
@@ -43,7 +43,7 @@ impl FSM {
 }
 
 pub struct StateBuilder {
-    fsm: FSM,
+    state_machine: StateMachine,
     name: String,
     jumps: Vec<Trans>,
 }
@@ -57,52 +57,55 @@ impl StateBuilder {
         self
     }
 
-    pub fn end(self) -> FSM {
+    pub fn end(self) -> StateMachine {
         let a = self.name.clone();
         self.r#else(&a)
     }
 
-    pub fn r#else(mut self, next: impl ToString) -> FSM {
+    pub fn r#else(mut self, next: impl ToString) -> StateMachine {
         let state = State {
             name: self.name,
             trans: self.jumps,
             default: next.to_string(),
         };
-        self.fsm.states.push(state);
-        self.fsm
+        self.state_machine.states.push(state);
+        self.state_machine
     }
 }
 
 // ----------------------------------------------------------------------------
 
-impl Module {
-    pub fn sync_fsm(mut self, fsm: FSM) -> Self {
-        println!("{:#?}", &fsm);
-        let width = clog2(fsm.states.len()).unwrap_or(8);
-        self = self.logic(&fsm.state_var, width, 1);
-        for (i, state) in fsm.states.iter().enumerate() {
-            self = self.lparam(&state.name, format!("{i}"));
+impl Extension for StateMachine {
+    fn add(self, mut module: Module) -> Module {
+        println!("{:#?}", &self);
+        let width = clog2(self.states.len()).unwrap_or(8);
+        module = module.logic(&self.state_var, width, 1);
+        for (i, state) in self.states.iter().enumerate() {
+            module = module.lparam(&state.name, format!("{i}"));
         }
-        self = self.sync_ff(
-            Stmt::assign(&fsm.state_var, "0"),
+
+        use super::DFF;
+
+        module = module.add(DFF::sync(
+            Stmt::assign(&self.state_var, "0"),
             Stmt::begin()
                 .case({
-                    let mut cases = Case::new(&fsm.state_var);
-                    for state in fsm.states {
+                    let mut cases = Case::new(&self.state_var);
+                    for state in self.states {
                         cases = cases.case(&state.name, {
                             let mut stmt = Stmt::begin();
                             for trans in state.trans {
                                 stmt = stmt
-                                    .r#if(&trans.cond, Stmt::assign(&fsm.state_var, &trans.next));
+                                    .r#if(&trans.cond, Stmt::assign(&self.state_var, &trans.next));
                             }
-                            stmt = stmt.r#else(Stmt::assign(&fsm.state_var, &state.default));
+                            stmt = stmt.r#else(Stmt::assign(&self.state_var, &state.default));
                             stmt.end()
                         });
                     }
                     cases
                 })
                 .end(),
-        );
-        self
+        ));
+        module
     }
 }

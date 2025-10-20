@@ -1,7 +1,11 @@
-pub mod axi_lite;
+mod axi_lite;
 mod common;
 #[cfg(feature = "unstable")]
-pub mod pico;
+mod pico;
+
+pub use axi_lite::AXILiteSlave;
+#[cfg(feature = "unstable")]
+pub use pico::PicoSlave;
 
 // ----------------------------------------------------------------------------
 

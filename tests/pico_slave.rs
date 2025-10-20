@@ -1,4 +1,9 @@
-use ruverta::{bus::RegList, mod_test, module::Module};
+#[cfg(feature = "unstable")]
+use ruverta::{
+    bus::{PicoSlave, RegList},
+    mod_test,
+    module::Module,
+};
 
 #[cfg(feature = "unstable")]
 mod_test!(
@@ -6,7 +11,7 @@ mod_test!(
     Module::new("pico_slave", "clk", "rstn")
         .input("clk", 1)
         .input("rstn", 1)
-        .pico_slave(
+        .add(PicoSlave::new(
             "mem",
             "clk",
             "rstn",
@@ -15,5 +20,5 @@ mod_test!(
                 .read_only("csr_ro", 8, 1)
                 .trigger("csr_tw")
                 .allocate_greedy(32, 8),
-        )
+        ))
 );
